@@ -14,23 +14,6 @@
           	<div id="header"></div>
 	      	<div id="loading">Loading...</div>
 	     	<div id="vis"></div>
-	        <svg id="defs">
-	    		<defs>
-		            <filter id="glow">
-		                <feColorMatrix type="matrix"
-		                    values=
-		                    "0 0 0 0   0
-		                     0 0 0 0.9 0 
-		                     0 0 0 0.9 0 
-		                     0 0 0 1   0"/>
-		                <feGaussianBlur stdDeviation="100" result="coloredBlur"/>
-		                <feMerge>
-		                    <feMergeNode in="coloredBlur"/>
-		                    <feMergeNode in="SourceGraphic"/>
-		                </feMerge>
-		            </filter>
-		        </defs>
-    		</svg>
 	    </div>
 	    <script src="js/transactions.js"></script>
     </body>
