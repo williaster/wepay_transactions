@@ -70,7 +70,7 @@ var transactions = [
 		.x(function(d) { return d[0]; }) 
 		.y(function(d) { return d[1]; })
 		.interpolate("cardinal") // will use only 3 points, must smooth
-		.tension(0.0); 			 // 1 = straight lines
+		.tension(0.0); 			 // 1 = straight/kinked lines
 
 	// layer 0: glow
 	// TODO: make background circle for glow
@@ -92,9 +92,15 @@ var transactions = [
 	var g = svg.append("g");
 	var countries, transaction_groups, txn_idx;
 
+
+
+
+
 	d3.json("data/maps/countries2.topo.json", function(error, world) {
 	  
-		d3.json("data/txns/1000_txns.json", function(error2, transactions) {
+		d3.json("data/txns/1000_txns_latlong.json", function(error2, transactions) {
+			
+			console.log(transactions.length + "transactions loaded");
 			
 			transactions.forEach(function(txn){
 				txn["type"]     = "Feature";
@@ -103,8 +109,6 @@ var transactions = [
 					"coordinates": [ eval(txn.from_coord), eval(txn.to_coord) ]
 				};
 			})
-
-			console.log(transactions);
 
 			if (error) return console.log(error); 
 			d3.select("div#loading").remove(); 
@@ -149,7 +153,7 @@ var transactions = [
 		} else { // compute next interval based on real time between these transactions
 			var curr_txn_data = transaction_groups[0][txn_idx].__data__,
 				next_txn_data = transaction_groups[0][txn_idx + 1].__data__,
-				interval      = (next_txn_data.time - curr_txn_data.time) * 100; // s to ms
+				interval      = (next_txn_data.time - curr_txn_data.time) / 10; // ms
 			
 			return get_transaction_callback(interval); 
 		}
