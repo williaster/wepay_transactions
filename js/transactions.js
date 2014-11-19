@@ -30,10 +30,11 @@ var transactions = [
 ];
 
 	// vis functions ----------------------------------------------------------
-	var width  = 1000,
+	var width  = 1200,
 	    height = 650;
 
 	var svg = d3.select("#vis").append("svg")
+	  .attr("class", "svg")
 	  .attr("width", width)
 	  .attr("height", height);
 
@@ -45,7 +46,7 @@ var transactions = [
 		.attr("x", "-150%").attr("y", "-150%") // make filter canvas bigger, so blur doesn't become square
 		.attr("width", "300%").attr("height", "300%")
 		.append("feGaussianBlur")
-		.attr("stdDeviation", 2);
+		.attr("stdDeviation", 3);
 
 	// there are two projection levels, the land (projection), and the sky
 	var projection = d3.geo.orthographic()
@@ -93,33 +94,51 @@ var transactions = [
 
 	d3.json("data/maps/countries2.topo.json", function(error, world) {
 	  
-		if (error) return console.log(error); 
-		d3.select("div#loading").remove(); 
+		d3.json("data/txns/1000_txns.json", function(error2, transactions) {
+			
+			transactions.forEach(function(txn){
+				txn["type"]     = "Feature";
+				txn["geometry"] = {
+					"type": "LineString",
+					"coordinates": [ eval(txn.from_coord), eval(txn.to_coord) ]
+				};
+			})
 
-		// layer 3, land
-		countries = g.append("path")
-			.datum( topojson.feature(world, world.objects.countries) )
-			.attr("class", "land")
-			.attr("d", path);
+			console.log(transactions);
 
-		// layer 4: arcs in sky, and their shadows
-		//animate_transactions(transactions);
-		transaction_groups = svg.append("g").attr("class", "transactions")
-			.selectAll("g")
-			.data(transactions)
-		  .enter().append("g")
-		  	.attr("class", "transaction-group");
-		
-		txn_idx = 0;
-		d3.timer( recursive_transaction_callback(), 1000);
+			if (error) return console.log(error); 
+			d3.select("div#loading").remove(); 
 
-		//transaction_groups.each( show_transaction );	
+			// layer 3, land
+			countries = g.append("path")
+				.datum( topojson.feature(world, world.objects.countries) )
+				.attr("class", "land")
+				.attr("d", path);
+
+			// layer 4: arcs in sky, and their shadows
+			//animate_transactions(transactions);
+			transaction_groups = svg.append("g").attr("class", "transactions")
+				.selectAll("g")
+				.data(transactions)
+			  .enter().append("g")
+			  	.attr("class", "transaction-group");
+			
+			txn_idx = 0;
+			d3.timer( recursive_transaction_callback(), 1000);
+
+			//transaction_groups.each( show_transaction );	
+		});
+
 	});
 
 	// helper functions -------------------------------------------------------
 
-	// recursive function for creating and returning transaction callbacks
-	// returns new functions because timers are mapped to instances; see http://bit.ly/1GQ6AhU
+	/* 
+	* recursive function for creating and returning transaction callbacks
+	* returns new functions because timers are mapped to instances, so 
+	* terminating a single instance in a timer would stop all future callbacks
+	* ( see http://bit.ly/1GQ6AhU )
+	*/
 	function recursive_transaction_callback() {
 		if (txn_idx >= transaction_groups.size()) { // base case: no more transactions
 			return function() { return true; };
@@ -130,15 +149,17 @@ var transactions = [
 		} else { // compute next interval based on real time between these transactions
 			var curr_txn_data = transaction_groups[0][txn_idx].__data__,
 				next_txn_data = transaction_groups[0][txn_idx + 1].__data__,
-				interval      = (next_txn_data.properties.time - curr_txn_data.properties.time) * 1000; // s to ms
+				interval      = (next_txn_data.time - curr_txn_data.time) * 100; // s to ms
 			
 			return get_transaction_callback(interval); 
 		}
 	}
 
-	// shows a transaction for the current txn_idx, increments txn_idx,
-	// and returns a callback function to be used with d3.timer, 
-	// with the specified interval
+	/*
+	* shows a transaction for the current txn_idx, increments txn_idx,
+	* and returns a callback function to be used with d3.timer, 
+	* with the specified interval
+	*/
 	function get_transaction_callback(interval) {
 		return function() { 
 			show_transaction( transaction_groups[0][txn_idx] );
@@ -146,7 +167,6 @@ var transactions = [
 			txn_idx += 1;
 			d3.timer(recursive_transaction_callback(), interval);
 
-			console.log("curr txn idx: " + (txn_idx - 1) + " next int: " + interval);
 			return true; // stops the callback function
 		};
 	}
@@ -154,6 +174,7 @@ var transactions = [
 	// initializes the arc, arc_shadow, and arc_head components of a transaction
 	// then animates them based on arc length
 	function show_transaction(transaction_group) {
+
 		// before animation, initialize arc, arc shadow, and arc head
 		var arc = d3.select(transaction_group).append("path")
 			.attr("class", "transaction arc")
@@ -170,7 +191,7 @@ var transactions = [
 			.attr("filter", "url(#blur)")
 			.attr("cx", -1000)
 			.attr("cy", -1000)
-			.attr("r", function(d) { return 2; });
+			.attr("r", function(d) { return 1; });
 
 		// now animate
 		animate_transaction(arc, arc_shadow, arc_head);
@@ -184,8 +205,8 @@ var transactions = [
 	function animate_transaction(arc, arc_shadow, arc_head) {
 		// TODO: DRY / clean arc transitions into a function ?
 
-		var in_duration   = 5,
-			out_duration  = 10,
+		var in_duration   = 1,
+			out_duration  = 1,
 			arc_length    = arc.node().getTotalLength(),
 			shadow_length = arc_shadow.node().getTotalLength();
 
@@ -210,7 +231,6 @@ var transactions = [
 			.transition()
 				.duration(arc_length*out_duration)
 				.attr("stroke-dashoffset", -shadow_length)
-				.each("end", function() { this.parentNode.remove(); }); //
 
 		arc_head
 		    .transition()
@@ -224,8 +244,14 @@ var transactions = [
 			        return function (t) {
 			          	return arc.node().getPointAtLength(t * arc_length).y;
 			    	};
-    			}); // nb: these are removed from DOM when arcs remove parent node
-	}
+    			})
+    		.attr("r", function(d) { return 3; }) 
+    		.transition()
+				.attr("r", function(d) { return 10; })
+				.attr("opacity", 0.5)
+				.duration((in_duration + out_duration) * arc_length)
+				.each("end", function() { this.parentNode.remove(); }); 
+    }
 
 	// Interpolates the position of a location along an arc
 	function location_along_arc(start, end, loc) {
@@ -236,10 +262,10 @@ var transactions = [
 	// Returns 3-element array of projected coordinates for a transaction,
 	// the outer elements are projected on land, the middle in the sky
 	function project_transaction(transaction) {
-	    var source = transaction.geometry.coordinates[0],
-	        target = transaction.geometry.coordinates[1],
-	        mid    = location_along_arc(source, target, .5);
+	    var source = eval(transaction.from_coord),
+	        target = eval(transaction.to_coord),
+	        mid    = location_along_arc(source, target, 0.5);
 
-		return [ projection(source), sky(mid), projection(target) ]
+	    return[ projection(source), sky(mid), projection(target) ];
 	}
 

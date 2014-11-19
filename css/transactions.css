@@ -1,13 +1,18 @@
 body {
-	background: #262c33 url('../imgs/background-tile.png') top left;
+	background-color: #333a45;
 }
 #vis {
 	display: table;
 	margin: 0 auto;
+	padding: 0 0;
+}
+
+.svg {
+	stroke: none;
 }
 
 .globe {
-	fill: #000f19;
+	fill: #d1d9de;
 }
 
 .land, .transaction {
@@ -17,9 +22,9 @@ body {
 }
 
 .land {
-	fill: #445;
-	stroke: #fff;
-	stroke-width: 0.3px;
+	fill:  #f2f2f2;
+	stroke: #d1d9de;
+	stroke-width: 1.5px;
 }
 
 .transaction .arc {
@@ -34,13 +39,13 @@ body {
 }
 
 .arc {
-	stroke: #abc700;
+	stroke: #4991dc;
 }
 
 .shadow {
 	stroke: #000;
 	opacity: 0.2;
-	stroke-width: 2.5px;
+	stroke-width: 1.5px;
 }
 
 .arc-head {
@@ -50,7 +55,7 @@ body {
 
 .graticule {
   fill: none;
-  stroke: #fff;
-  stroke-width: 0.5px;
-  stroke-opacity: 0.2;
+  stroke: #f2f2f2;
+  stroke-width: 2px;
+  stroke-opacity: 0.5;
 }
