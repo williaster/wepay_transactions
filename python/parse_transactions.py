@@ -89,7 +89,7 @@ def clean_df(df):
     df = df.ix[:,["capture_day", "capture_timestamp", "pr_id",
                   "gross", "payee_coord", "payer_coord"]]
     df.columns = \
-        ["date", "time", "app_id", "amount", "from_coord", "to_coord"]
+        ["date", "time", "app_id", "amount", "to_coord", "from_coord"]
     
     return df
 
