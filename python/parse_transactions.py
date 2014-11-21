@@ -30,12 +30,12 @@ def get_txn_longlat(df_txns, df_zip_to_latlong):
     payer_latlong = pd.merge(df_txns, df_zip_to_latlong, 
 			                 left_on=["payer_zip", "payer_country"], 
 			                 right_on=["zip","country"], 
-			                 how="inner").ix[:,("lat","long")]
+			                 how="left").ix[:,("lat","long")]
    
     payee_latlong = pd.merge(df_txns, df_zip_to_latlong, 
 			                 left_on=["payee_zip", "payee_country"], 
 			                 right_on=["zip", "country"], 
-			                 how="inner").ix[:,("lat","long")]
+			                 how="left").ix[:,("lat","long")]
     
     df_txns["payer_coord"] = "[" + payer_latlong["long" ].map(str) + "," + \
               							 payer_latlong["lat"].map(str) + "]"
@@ -44,7 +44,7 @@ def get_txn_longlat(df_txns, df_zip_to_latlong):
               							 payee_latlong["lat"].map(str) + "]"
 
     #print df_txns # check zip to coord mappings
-    return df_txns
+    return df_txns.dropna()
 
 def truncate_CAN_zips(df):
     """Truncates CANADIAN zipcodes in payer_zip or payee_zip

@@ -7,7 +7,27 @@ body {
 	margin: 0 auto;
 	padding: 0 0;
 }
-
+.logo {
+	shape-rendering: crispEdges;
+	font-size: 50px;
+	font-weight: 400;
+	stroke: none;
+}
+.logo .blue {
+	fill: #4991dc;
+}
+.logo .green {
+	fill: #2eb135;
+}
+.transaction-ct {
+	font-weight: 100;
+	font-size: 50px;
+	stroke: none;
+	fill: #f2f2f2;
+}
+.ct-label {
+	fill: #2eb135;
+}
 .map {
 	stroke: none;
 }
@@ -21,7 +41,6 @@ body {
   	stroke-linejoin: round;
   	vector-effect: non-scaling-stroke;
 }
-
 .land {
 	fill:  #f2f2f2;
 	stroke: #d1d9de;
@@ -31,11 +50,9 @@ body {
 .arc, .shadow , .timeline-path {
 	fill: none;
 }
-
 .arc {
-	stroke: #4991dc;
+	
 }
-
 .shadow {
 	stroke: #000;
 	opacity: 0.2;
@@ -43,7 +60,6 @@ body {
 
 .arc-head {
 	stroke: none;
-	fill: #abc700;
 }
 
 .graticule {

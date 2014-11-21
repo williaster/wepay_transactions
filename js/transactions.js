@@ -40,9 +40,22 @@
 		mapHeight  = 650   - mapMargins.top  - mapMargins.bottom;	
 
 	var timelineMargins = { top: mapHeight + mapMargins.top + 20,
-							right: mapMargins.right, bottom: 20, left: mapMargins.left },
+							right: mapMargins.right, 
+							bottom: 20, 
+							left: mapMargins.left },
 		timelineWidth   = mapWidth,
 		timelineHeight  = visHeight - timelineMargins.top - timelineMargins.bottom;
+
+	var logoMargin = { top: 100, right: 0, bottom: 0, left: 25 },
+		logoWidth  = 300 - logoMargin.left - logoMargin.right,
+		logoHeight = 200 - logoMargin.top  - logoMargin.bottom;
+
+	var counterMargin = { top: logoHeight + logoMargin.top + logoMargin.bottom,
+						  right: logoMargin.right, 
+						  bottom: logoMargin.bottom, 
+						  left: logoMargin.left },
+		counterWidth  = 300 - counterMargin.left - counterMargin.right,
+		counterHeight = 300 - counterMargin.top  - counterMargin.bottom;
 
 	// The actual svg components, these handles are added to below
 	var vis = d3.select("#vis").append("svg")
@@ -57,14 +70,40 @@
 	  .append("g")
 		.attr("transform", "translate(" + mapMargins.left + ", " + mapMargins.top + ")")
 
-	var timeline = vis.append("svg")
-		.attr("class", "txn-timeline")
-		.attr("width",  timelineWidth + timelineMargins.left + timelineMargins.right)
-		.attr("height", timelineHeight + timelineMargins.top + timelineMargins.bottom)
+	// WePay logo 
+	var logo = vis.append("svg")
+		.attr("class", "logo")
+		.attr("width",  logoWidth  + logoMargin.left + logoMargin.right)
+		.attr("height", logoHeight + logoMargin.top  + logoMargin.bottom)
 	  .append("g")
-		.attr("transform", "translate(" + timelineMargins.left + ", " + timelineMargins.top + ")");
-	 
-		
+	  	.attr("transform", "translate(" + logoMargin.left + ", " + logoMargin.top + ")");
+	  
+	var we = logo.append("text")
+		.attr("class", "blue")
+		.text("we");
+
+	var pay = logo.append("text")
+		.attr("class", "green")
+		.text("pay")
+		.attr("transform", "translate(" + we[0][0].offsetWidth + ",0)");
+
+	// Transaction counter
+	var txn_counter = vis.append("svg")
+		.attr("class", "txn-counter")
+		.attr("width",  counterWidth  + counterMargin.left + counterMargin.right)
+		.attr("height", counterHeight + counterMargin.top  + counterMargin.bottom)
+	  .append("g")
+	  	.attr("transform", "translate(" + counterMargin.left + "," + counterMargin.top + ")");
+
+	var txn_counter_ct = txn_counter.append("text")
+		.attr("class", "transaction-ct")
+		.text("0");
+
+	var txn_counter_label = txn_counter.append("text")
+		.attr("class", "ct-label")
+		.text("Total transactions")
+		.attr("transform", "translate(0, " + 25 + ")");
+
 	var defs = vis.append("defs");
 	
 	defs.append("filter") // this is for transaction arc-head blur
@@ -89,8 +128,8 @@
 	    .translate([mapWidth / 2, mapHeight])
 	    .clipAngle(90);
 
-	// transaction count timeline set up
-	var n_timeline_bins  = 40, // only approx, depends on vals
+	// Transaction count timeline 
+	var n_timeline_bins  = 50, // only approx, depends on vals
 		n_timeline_ticks = 15;
 
 	var txn_timeline_x = d3.time.scale()
@@ -106,20 +145,36 @@
 		.orient("bottom");
 
 	var timeline_area = d3.svg.area()
-		.interpolate("monotone")
-	    .x(function(d) {  return txn_timeline_x(d.x); })
+		//.interpolate("monotone")
+	    .x(function(d) { return txn_timeline_x(d.x); })
 	    .y0(timelineHeight)
 	    .y1(function(d) { return txn_timeline_y(d.y); });
 
 	var timeline_line = d3.svg.line()
-		.interpolate("monotone")
+		//.interpolate("monotone")
 	    .x(function(d) { return txn_timeline_x(d.x); })
 	    .y(function(d) { return txn_timeline_y(d.y); });
+
+	var timeline = vis.append("svg")
+		.attr("class", "txn-timeline")
+		.attr("width",  timelineWidth + timelineMargins.left + timelineMargins.right)
+		.attr("height", timelineHeight + timelineMargins.top + timelineMargins.bottom)
+	  .append("g")
+		.attr("transform", "translate(" + timelineMargins.left + ", " + timelineMargins.top + ")");
+
+	var timeline_clip = defs.append("clipPath") //actual clipping path
+		.attr("id", "clip-timeline")
+	  	.append("rect")
+	  	.attr("height", timelineHeight);
+	  	
+	var timeline_clippable = timeline.append("g") // only clip data, not axes
+		.attr("class", "timeline-clippable")
+		.attr("clip-path", "url(#clip-timeline)");
 
 	var timeline_fill = timeline.append("path")
 		.attr("class", "timeline-area");
 
-	var timeline_path = timeline.append("path")
+	var timeline_path = timeline_clippable.append("path")
 		.attr("class", "timeline-path");
 
 	var timeline_axis = timeline.append("g")
@@ -137,13 +192,15 @@
 		.interpolate("cardinal") // will use only 3 points, must smooth
 		.tension(0.0); 			 // 1 = straight/kinked lines
 
-	var txn_strokewidth = d3.scale.linear()
+	var arc_strokewidth = d3.scale.linear()
 		.range([1.5,8])
 		.domain([0,1000])
 		.clamp(true); // no massive lines for txn amts outside the domain
 
+	var arc_color = d3.scale.category10();
+
 	// variable sliders
-	var speed_multiplier = 5; // 100x = don't exceed :)
+	var speed_multiplier = 100; // 100x = don't exceed :)
 
 
 	// layer 0: glow
@@ -165,31 +222,24 @@
 
 	var g = map.append("g");
 	
-	var countries, transaction_groups, timeline_cts,
-		txn_ct   = 0, // cumulative txn count
-		txn_idx  = 0, // idx of current txn
-		time_idx = 0; // idx of txn count timeline
+	var countries, transaction_groups, timeline_cts, transactions,
+		start_delay = 1000,
+		txn_ct  = 0, // cumulative txn count
+		txn_idx = 0; // idx of current txn
 	
 	d3.json("data/maps/countries2.topo.json", function(error, world) {
 		// at this point need actual data points
-		d3.json("data/txns/1000_txns_latlong.json", function(error2, transactions) {
-			
-			d3.select("div#loading").remove(); 
-			if (error) return console.log(error); 
-			console.log(transactions.length + "transactions loaded");
+		d3.json("data/txns/3000_txns_latlong.json", function(error2, txns) {
+			transactions = txns;
 
-			geoJSONify(transactions); 				  // add geoJSON features to each txn
+			if (error) return console.log(error); 
+
+			parse_txns(transactions); 				  // add geoJSON features to each txn
 			timeline_cts = get_txn_cts(transactions); // update timeline domain, computes cts
 
-			timeline_fill
-				.datum(timeline_cts)
-				.attr("d", timeline_area);
-
-			timeline_path
-				.attr("d", function(d) { return timeline_line(timeline_cts); });
-
-			console.log(timeline_cts);
-
+			timeline_fill.datum(timeline_cts).attr("d", timeline_area);
+			timeline_path.datum(timeline_cts).attr("d", timeline_line);
+		
 			// layer 3, land
 			countries = g.append("path")
 				.datum( topojson.feature(world, world.objects.countries) )
@@ -203,19 +253,28 @@
 				.data(transactions)
 			  .enter().append("g")
 			  	.attr("class", "transaction-group");
-			
-			txn_idx  = 0,
-			time_idx = 0, // can have multiple txns per time unit (ms)
-			start_delay = 1000;
-			//d3.timer( recursive_transaction_callback(), start_delay); 
+				
+			d3.timer( recursive_transaction_callback(), start_delay); 
+			increment_timeline(txn_idx);
 		});
 
 	});
 
 	// helper functions -------------------------------------------------------
 
-	function make_land() {}
+	function increment_timeline(txn_idx) {
+		timeline_clip.transition()
+			.duration(100)
+			.attr("width", txn_timeline_x(transactions[txn_idx].time))
+			.ease("linear");
+	}
 	
+	// Adds commas to a number, better performance than n.toLocaleString();
+	// source: http://stackoverflow.com/a/2901298
+	function num_with_commas(n) { 
+    	return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+	}
+
 	/*
 	 * Updates the x and y txn_timeline domains based on transaction values
 	 * Computes transactions counts over time using the d3 histogram layout
@@ -223,18 +282,18 @@
 	 */
 	function get_txn_cts(transactions) {
 		// Update the domain to the current transactions, needed for bins
-		txn_timeline_x.domain([transactions[0].time, 
-					           transactions[transactions.length - 1].time]);
+		txn_timeline_x.domain(d3.extent(transactions, function(d) { return d.time; }));
 
-		timeline_axis.call(txn_timeline_xaxis);
+		timeline_axis.call(txn_timeline_xaxis); // update axis ticks once domain known
 
 		var timeline_cts = d3.layout.histogram()
 			.value(function(d) { return d.time; })
 			.bins( txn_timeline_x.ticks(n_timeline_bins) )
 			(transactions)
-			// .map(function(d) { // removes txns from bins to save space; only need cts
-			// 	return { x: d.x, y: d.y, dx: d.dx }; 
-			// }); 
+			.map(function(d) { // removes txns from bins to save space; only need cts
+							   // converts dx to Date, instead of ms offset
+				return { x: d.x, y: d.y, dx: new Date( d.x.getTime() + d.dx ) }; 
+			}); 
 
 		// Update y domain based on count values
 		txn_timeline_y.domain([0, d3.max(timeline_cts, function(d) { return d.y; })]);
@@ -243,11 +302,13 @@
 	}
 
 	/*
-	 * adds a LineString geoJSON feature to each transaction using to/from coords 
-	 * this is used to draw paths on the globe (not sky).
+	 * Adds a LineString geoJSON feature to each transaction using to/from coords 
+	 * this is used to draw paths on the globe (not sky). Converts time to an explicit
+	 * Date object (from ms since epoch)
 	 */
-	function geoJSONify(transactions) {
+	function parse_txns(transactions) {
 		transactions.forEach(function(txn){
+			txn["time"]     = new Date(txn["time"]);
 			txn["type"]     = "Feature";
 			txn["geometry"] = {
 				"type": "LineString",
@@ -257,7 +318,7 @@
 	}
 
 	/* 
-	 * recursive function for creating and returning transaction callbacks
+	 * Recursive function for creating and returning transaction callbacks
 	 * returns new functions because timers are mapped to instances, so 
 	 * terminating a single instance in a timer would stop all future callbacks
  	 * ( see http://bit.ly/1GQ6AhU )
@@ -289,47 +350,41 @@
 			
 			show_transaction(txn); 		  // display arcs
 			update_txn_counter(++txn_ct); // update counter
-			update_txn_timeline(txn); 	  // update timeline
-
+			increment_timeline(txn_idx);  // update timeline
 			txn_idx++;
-			d3.timer(recursive_transaction_callback(), interval);
 
-			return true; // stops the callback function
+			d3.timer(recursive_transaction_callback(), interval); // recurse after pause
+
+			return true; // stops this callback instance (recurse not affected)
 		};
 	}
 
-	// 
-	function update_txn_timeline(curr_txn, time_idx) {
-		var curr_
-		if (curr_txn.time < 3) {
-
-		} 
-		return;
-	}
-
 	function update_txn_counter(curr_ct) {
-		return;
+		txn_counter_ct.text( num_with_commas(curr_ct) );
 	}
 
 	// initializes the arc, arc_shadow, and arc_head components of a transaction
 	// then animates them based on arc length
 	function show_transaction(transaction_group) {
+		var txn_color = arc_color(txn_idx % 20);
 
 		// before animation, initialize arc, arc shadow, and arc head
 		var arc = d3.select(transaction_group).append("path")
 			.attr("class", "transaction arc")
-			.attr("stroke-width", function(d) { return txn_strokewidth( d.amount ); })
+			.attr("stroke", txn_color)
+			.attr("stroke-width", function(d) { return arc_strokewidth( d.amount ); })
 			.attr("d", function(d) { return sky_line( project_transaction(d) ); })
 			.style("display", "none");
 
 		var arc_shadow = d3.select(transaction_group).append("path")
 			.attr("class", "transaction shadow")
-			.attr("stroke-width", function(d) { return txn_strokewidth( d.amount ); })
+			.attr("stroke-width", function(d) { return arc_strokewidth( d.amount ); })
 			.attr("d", path)
 			.style("display", "none");
 
 		var arc_head = d3.select(transaction_group).append("circle")
 			.attr("class", "arc-head")
+			.attr("fill", txn_color)
 			.attr("filter", "url(#blur)")
 			.attr("cx", -1000)
 			.attr("cy", -1000)
