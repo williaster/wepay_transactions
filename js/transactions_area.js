@@ -29,10 +29,6 @@
 
 
 	// vis functions ----------------------------------------------------------
-	// variable sliders
-	var speed_multiplier = 10; // 100x = don't exceed :)
-
-
 
 	// sizes and margins of all visualization components
 	var visMargins = { top: 0, right: 0, bottom: 0, left: 0 },
@@ -133,16 +129,8 @@
 	    .clipAngle(90);
 
 	// Transaction count timeline 
-	var timeline = vis.append("svg")
-		.attr("class", "txn-timeline")
-		.attr("width",  timelineWidth + timelineMargins.left + timelineMargins.right)
-		.attr("height", timelineHeight + timelineMargins.top + timelineMargins.bottom)
-	  .append("g")
-		.attr("transform", "translate(" + timelineMargins.left + ", " + timelineMargins.top + ")");
-	
 	var n_timeline_bins  = 50, // only approx, depends on vals
-		n_timeline_ticks = 15,
-		timeline_bars, timeline_g;
+		n_timeline_ticks = 15;
 
 	var txn_timeline_x = d3.time.scale()
 		.range([0, timelineWidth]);
@@ -153,13 +141,46 @@
 	var txn_timeline_xaxis = d3.svg.axis()
 		.scale(txn_timeline_x)
 		.tickSize(5)
+		//.tickFormat(d3.time.format("%b-%d %I:%M%p"))
 		.orient("bottom");
 
-	var timeline_hist = timeline.append("g");
+	var timeline_area = d3.svg.area()
+		//.interpolate("monotone")
+	    .x(function(d) { return txn_timeline_x(d.x); })
+	    .y0(timelineHeight)
+	    .y1(function(d) { return txn_timeline_y(d.y); });
+
+	var timeline_line = d3.svg.line()
+		//.interpolate("monotone")
+	    .x(function(d) { return txn_timeline_x(d.x); })
+	    .y(function(d) { return txn_timeline_y(d.y); });
+
+	var timeline = vis.append("svg")
+		.attr("class", "txn-timeline")
+		.attr("width",  timelineWidth + timelineMargins.left + timelineMargins.right)
+		.attr("height", timelineHeight + timelineMargins.top + timelineMargins.bottom)
+	  .append("g")
+		.attr("transform", "translate(" + timelineMargins.left + ", " + timelineMargins.top + ")");
+
+	var timeline_clip = defs.append("clipPath") //actual clipping path
+		.attr("id", "clip-timeline")
+	  	.append("rect")
+	  	.attr("height", timelineHeight);
+	  	
+	var timeline_clippable = timeline.append("g") // only clip data, not axes
+		.attr("class", "timeline-clippable")
+		.attr("clip-path", "url(#clip-timeline)");
+
+	var timeline_fill = timeline.append("path")
+		.attr("class", "timeline-area");
+
+	var timeline_path = timeline_clippable.append("path")
+		.attr("class", "timeline-path");
 
 	var timeline_axis = timeline.append("g")
 		.attr("class", "timeline-axis")
 		.attr("transform", "translate(0," + timelineHeight + ")");
+
 
 	// for drawing on the land, and sky
 	var path = d3.geo.path() 
@@ -177,6 +198,10 @@
 		.clamp(true); // no massive lines for txn amts outside the domain
 
 	var arc_color = d3.scale.category10();
+
+	// variable sliders
+	var speed_multiplier = 100; // 100x = don't exceed :)
+
 
 	// layer 0: glow
 	// TODO: make background circle for glow
@@ -199,9 +224,8 @@
 	
 	var countries, transaction_groups, timeline_cts, transactions,
 		start_delay = 1000,
-		txn_ct   = 0, // cumulative txn count
-		txn_idx  = 0, // idx of current txn
-		time_idx = 0; // idx of timeline count bin
+		txn_ct  = 0, // cumulative txn count
+		txn_idx = 0; // idx of current txn
 	
 	d3.json("data/maps/countries2.topo.json", function(error, world) {
 		// at this point need actual data points
@@ -213,9 +237,9 @@
 			parse_txns(transactions); 				  // add geoJSON features to each txn
 			timeline_cts = get_txn_cts(transactions); // update timeline domain, computes cts
 
-			console.log(timeline_cts);
-			init_timeline();
-
+			timeline_fill.datum(timeline_cts).attr("d", timeline_area);
+			timeline_path.datum(timeline_cts).attr("d", timeline_line);
+		
 			// layer 3, land
 			countries = g.append("path")
 				.datum( topojson.feature(world, world.objects.countries) )
@@ -231,53 +255,18 @@
 			  	.attr("class", "transaction-group");
 				
 			d3.timer( recursive_transaction_callback(), start_delay); 
-			//increment_timeline(txn_idx);
+			increment_timeline(txn_idx);
 		});
 
 	});
 
 	// helper functions -------------------------------------------------------
 
-	function init_timeline() {
-		timeline_g = timeline_hist.selectAll(".timeline-bar")
-			.data(timeline_cts)
-		  .enter().append("g")
-		  	.attr("class", "timeline-bar")
-		  	.attr("transform", function(d) {
-		  		return "translate(" + txn_timeline_x(d.x) + "," + txn_timeline_y(d.curr_y) + ")";
-		  	});
-	
-		timeline_bars = timeline_g.append("rect")
-			.attr("width",  function(d) { return txn_timeline_x( d.x1 ) - txn_timeline_x( d.x ); })
-			.attr("height", function(d) { return timelineHeight - txn_timeline_y( d.curr_y ); });
-	}
-
-	function update_timeline() {
-		timeline_g.attr("transform", function(d) {
-		  		return "translate(" + txn_timeline_x(d.x) + "," + txn_timeline_y(d.curr_y) + ")";
-		});
-		timeline_bars
-			.attr("height", function(d) { return timelineHeight - txn_timeline_y( d.curr_y ); });
-	}
-
-	function add_timeline_counts() {
-		var curr_txn = transactions[txn_idx];
-		var curr_bin = timeline_cts[time_idx];
-
-		if (curr_txn.time <= curr_bin.x1) {
-			curr_bin.curr_y++;
-			d3.select(timeline_bars[0][time_idx]).classed("timeline-curr", true);
-			update_timeline();
-
-		} else if (time_idx + 1 < timeline_cts.length) { // next bin
-			d3.select(timeline_bars[0][time_idx]).classed("timeline-curr", false);
-			time_idx++;
-			add_timeline_counts();
-
-		} else { // no more
-			d3.select(timeline_bars[0][time_idx]).classed("timeline-curr", false);
-			return;
-		}
+	function increment_timeline(txn_idx) {
+		timeline_clip.transition()
+			.duration(100)
+			.attr("width", txn_timeline_x(transactions[txn_idx].time))
+			.ease("linear");
 	}
 	
 	// Adds commas to a number, better performance than n.toLocaleString();
@@ -295,8 +284,7 @@
 		// Update the domain to the current transactions, needed for bins
 		txn_timeline_x.domain(d3.extent(transactions, function(d) { return d.time; }));
 
-		// Update axis ticks once domain known, else default 1970 vals :(
-		timeline_axis.call(txn_timeline_xaxis); 
+		timeline_axis.call(txn_timeline_xaxis); // update axis ticks once domain known
 
 		var timeline_cts = d3.layout.histogram()
 			.value(function(d) { return d.time; })
@@ -304,8 +292,7 @@
 			(transactions)
 			.map(function(d) { // removes txns from bins to save space; only need cts
 							   // converts dx to Date, instead of ms offset
-				return { x: d.x, dx: d.dx, y: d.y, 
-						 curr_y: 0,  x1: new Date( d.x.getTime() + d.dx ), }; 
+				return { x: d.x, y: d.y, dx: new Date( d.x.getTime() + d.dx ) }; 
 			}); 
 
 		// Update y domain based on count values
@@ -341,7 +328,7 @@
 			return function() { return true; };
 		
 		} else if (txn_idx == transaction_groups.size() - 1) { // last transaction
-			return transaction_callback_factory(0); 
+			return get_transaction_callback(0); 
 
 		} else { // compute next interval based on real time between these transactions
 			var curr_txn_data = transaction_groups[0][txn_idx].__data__,
@@ -363,7 +350,7 @@
 			
 			show_transaction(txn); 		  // display arcs
 			update_txn_counter(++txn_ct); // update counter
-			add_timeline_counts();        // update timeline
+			increment_timeline(txn_idx);  // update timeline
 			txn_idx++;
 
 			d3.timer(recursive_transaction_callback(), interval); // recurse after pause

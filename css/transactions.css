@@ -87,3 +87,12 @@ body {
 	fill: white;
 	font-size: 12px;
 }
+.timeline-bar {
+	stroke: #333a45;
+	stroke-width: 2px;
+	shape-rendering: crispEdges;
+	fill: #4991dc;
+}
+.timeline-curr {
+	fill: #2eb135;
+}
