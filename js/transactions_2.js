@@ -54,8 +54,7 @@
 	var timelineMargins = { top: mapHeight + mapMargins.top + 20,
 							right: mapMargins.right, 
 							bottom: 40, 
-							left: mapMargins.left, 
-							ctlabel_x: 5, ctlabel_y: -5},
+							left: mapMargins.left },
 		timelineWidth   = mapWidth,
 		timelineHeight  = visHeight - timelineMargins.top - timelineMargins.bottom;
 
@@ -198,7 +197,7 @@
 		slider_height = 100 - slider_margin.top  - slider_margin.bottom + counterMargin.top;
 
 	var speed_scale = d3.scale.linear()
-		.domain([1, 1000]) // x real time
+		.domain([1, 1000]) // 0.5-100x real time
 		.range([0, slider_width])
 		.clamp(true); 
 
@@ -295,6 +294,9 @@
 			timeline_cts = 					// update timeline domain, computes cts
 				get_txn_cts(transactions, 0); 
 
+			// console.log(timeline_cts);
+			// console.log(transactions);
+
 			init_timeline();
 			build_transactions_groups();
 		});
@@ -302,9 +304,6 @@
 
 	// helper functions -------------------------------------------------------
 
- 	/*
- 	 *
- 	 */
 	function reset_visualization(fillto_idx) {
 			timeline_cts = reset_txn_cts(timeline_cts, fillto_idx);
 			update_timeline();
@@ -314,16 +313,13 @@
 			build_transactions_groups() // starts recursive timer
 	}
 
-	/*
-	 * Sets bin.curr_y of timeline_cts whose idx are < fillto_idx to bin.y
-	 * (bin.y represents the final height of the bar, curr_y it's animation position)
-	 * If this condition is not met bin.curr_y is set to = 0;
-	 */
 	function reset_txn_cts(timeline_cts, fillto_idx) {
+		
 		for (var i=0; i < timeline_cts.length; i++) {
 			
 			var curr_txnbin = timeline_cts[i]
 				new_value   = i < fillto_idx ? curr_txnbin.y : 0;
+			
 			curr_txnbin.curr_y = new_value; 
 		}
 		return timeline_cts;
@@ -343,9 +339,6 @@
 	}
 	
 
-	/* 
-	 *
-	 */
 	function update_transaction_data(new_txns) {
 		// Case 1: if new_txns are indeed new, append them to current 
 		//  	   transactions, slice to get as many transactions as possible 
@@ -363,7 +356,7 @@
 			// are displayed in the histogram; we then update transactions to include
 			// only the new transactions because the old histogram counts will be filled
 			// and we want arcs to feed from only the new point in time/new values
-			timeline_cts = get_txn_cts(transactions, 1000); 
+			timeline_cts = get_txn_cts(transactions, 5000); 
 			transactions = new_txns; 
 			
 			var fillto_idx = get_fillto_idx(old_txns, timeline_cts);
@@ -371,20 +364,21 @@
 			init_timeline();
 			reset_visualization(fillto_idx);
 
+			//console.log(transactions.length + " total txns after merge");
+			//console.log(old_timeline_cts)
+			//console.log(timeline_cts)
+
 		} else { 
 		// Case 2: new_txns are the same as current transactions, just loop
+			console.log("same");
 			reset_visualization(0);
 		}
 
 	}
 
-	/*
-	 * Returns the maximum idx of timeline_counts bin that contains one or more txns 
-	 * from old_txns (bins up to this value will be filled by another value)
-	 */
 	function get_fillto_idx(old_txns, timeline_cts) {
 		var prev_maxtime = old_txns[old_txns.length - 1].time.getTime(),
-			fillto_idx   = -1;
+			fillto_idx   = 0;
 
 		// note: this does not guarantee that the counts around the old to new interface 
 		//		 is perfect but it is within a few counts;
@@ -392,8 +386,7 @@
 
 			if (prev_maxtime > timeline_cts[bin_idx].x.getTime()) {
 				fillto_idx = bin_idx;
-			}
-		}
+		
 		return fillto_idx;
 	}
 
@@ -443,41 +436,6 @@
 
 	}
 
-
-	/*
-	 * Adds a hover class to the bin rect, and adds a text object to the rect parent
-	 * (so it's in front of other rect) that displays the number of counts for the bin.
-	 */
-	function mouseover_bin(rect, d, i) {
-		d3.select("#bar-ct-label").remove(); // cleanup in case of weird mouseover error
-		d3.select(rect).classed("timeline-hover", true);
-
-		var text_anchor = i < timeline_cts.length / 2 ? "start" : "end",
-			translate_x = i < timeline_cts.length / 2 ? 
-						  +timelineMargins.ctlabel_x : 2*timelineMargins.ctlabel_x,
-			text = num_with_commas(d.curr_y) + 
-				   ( d.curr_y > 1 ? " transactions" : " transaction" );
-
-		var ct_label = d3.select(rect.parentNode).append("text")
-			.attr("id", "bar-ct-label");
-
-		ct_label.attr("class", "bar-ct-label")
-			.attr("transform", 
-				  "translate(" + (+txn_timeline_x(d.x) + translate_x) + "," 
-							   + (+txn_timeline_y(d.curr_y) + timelineMargins.ctlabel_y)+ ")")
-			.attr("text-anchor", text_anchor)
-			.text(text);
-	}
-
-	/*
-	 * Removes the hover class from the passed DOM rectangle.
-	 * Also removes the count label.
-	 */
-	function mouseout_bin(rect, d, i) {
-		d3.select(rect).classed("timeline-hover", false);
-		d3.select("#bar-ct-label").remove();
-	}
-
 	// Initializes the timeline
 	function init_timeline() {
 		if (timeline_hist.selectAll("g")) { timeline_hist.selectAll("g.timeline-bar").remove(); }
@@ -491,19 +449,15 @@
 		  	.attr("class", "timeline-bar")
 		  	.attr("transform", function(d) {
 		  		return "translate(" + txn_timeline_x(d.x) + "," + txn_timeline_y(d.curr_y) + ")";
-		  	})
-		  	.on("mouseover", function(d, i) { mouseover_bin(this, d, i); })
-			.on("mouseout",  function(d, i) { mouseout_bin(this, d, i); });
+		  	});
 	
 		timeline_bars = timeline_g.append("rect")
 			.attr("width",  function(d) { return txn_timeline_x( d.x1 ) - txn_timeline_x( d.x ); })
-			.attr("height", function(d) { return timelineHeight - txn_timeline_y( d.curr_y ); });
-			
+			.attr("height", function(d) { return timelineHeight - txn_timeline_y( d.curr_y ); });	
 	}
 
 	function update_timeline() {
-		timeline_g
-			.attr("transform", function(d) {
+		timeline_g.attr("transform", function(d) {
 		  	return "translate(" + txn_timeline_x(d.x) + "," + txn_timeline_y(d.curr_y) + ")";
 		});
 

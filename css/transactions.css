@@ -87,7 +87,15 @@ body {
 .timeline-curr {
 	fill: #2eb135;
 }
+.timeline-hover {
+	fill: #f2f2f2;
+}
 text.timeline-xlabel, text.timeline-ylabel {
+	font-size: 15px;
+	fill: #f2f2f2;
+}
+.bar-ct-label {
+	stroke: none;
 	font-size: 15px;
 	fill: #f2f2f2;
 }
