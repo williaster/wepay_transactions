@@ -24,27 +24,34 @@ def get_txn_longlat(df_txns, df_zip_to_latlong):
        flipped from the normal [lat,long] format, but more closely mirrors 
        [x,y] coordinates and is what d3.js expects. 
     """
-    df_txns.reset_index(inplace=True) # nessesary to match indices that result
-    								  # from the merge below
-
-    payer_latlong = pd.merge(df_txns, df_zip_to_latlong, 
-			                 left_on=["payer_zip", "payer_country"], 
-			                 right_on=["zip","country"], 
-			                 how="inner").ix[:,("lat","long")]
-   
-    payee_latlong = pd.merge(df_txns, df_zip_to_latlong, 
-			                 left_on=["payee_zip", "payee_country"], 
-			                 right_on=["zip", "country"], 
-			                 how="inner").ix[:,("lat","long")]
+    # Payer coords first
+    # join to get payer coords
+    df = pd.merge(df_txns, df_zip_to_latlong, 
+                  left_on=["payer_zip", "payer_country"], 
+                  right_on=["zip","country"], how="left")
     
-    df_txns["payer_coord"] = "[" + payer_latlong["long" ].map(str) + "," + \
-              							 payer_latlong["lat"].map(str) + "]"
+    # remove rows for which lat/long values weren't found
+    df.dropna(inplace=True, subset=["lat", "long"]) 
     
-    df_txns["payee_coord"] = "[" + payee_latlong["long" ].map(str) + "," + \
-              							 payee_latlong["lat"].map(str) + "]"
-
-    #print df_txns # check zip to coord mappings
-    return df_txns
+    # consolidate to single new column
+    df.loc[:,"payer_coord"] = \
+        "[" + df["long"].map(str) + "," + df["lat"].map(str) + "]"
+    
+    # drop join cols in prep for payee coords
+    df.drop(["zip", "lat", "long", "country"], axis=1, inplace=True) 
+    
+    
+    # Now payee coords
+    df = pd.merge(df, df_zip_to_latlong, 
+                  left_on=["payee_zip", "payee_country"], 
+                  right_on=["zip","country"], how="left")
+    df.dropna(inplace=True, subset=["lat", "long"]) 
+    df.loc[:,"payee_coord"] = \
+        "[" + df["long"].map(str) + "," + df["lat"].map(str) + "]"
+    df.drop(["zip", "lat", "long", "country"], axis=1, inplace=True) 
+    
+    #print df
+    return df
 
 def truncate_CAN_zips(df):
     """Truncates CANADIAN zipcodes in payer_zip or payee_zip
@@ -91,6 +98,8 @@ def clean_df(df):
     df.columns = \
         ["date", "time", "app_id", "amount", "to_coord", "from_coord"]
     
+    df.sort("time", inplace=True)
+
     return df
 
 def parse_txns(df_txns, df_zip_to_latlong=None):
@@ -106,8 +115,10 @@ def parse_txns(df_txns, df_zip_to_latlong=None):
     if not df_zip_to_latlong:
     	df_zip_to_latlong = pd.read_table(F_ZIP_TO_LATLONG, 
     									  names=["country", "zip", "lat", "long"])
+    	df_zip_to_latlong = df_zip_to_latlong.drop_duplicates()
 
-    df = df_txns.dropna(subset=["payee_zip", "payer_zip"]) # need start/end zip
+    df = df_txns.dropna(subset=["payee_zip", "payee_country", 
+                                "payer_zip", "payer_country"]) # need start/end zip
     df = truncate_CAN_zips(df) 
     df = stringify_zips(df)
     df = set_sec_to_ms(df) 

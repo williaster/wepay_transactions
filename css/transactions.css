@@ -25,6 +25,7 @@ body {
 	stroke: none;
 	fill: #f2f2f2;
 }
+
 .ct-label {
 	fill: #2eb135;
 }
@@ -50,9 +51,7 @@ body {
 .arc, .shadow , .timeline-path {
 	fill: none;
 }
-.arc {
-	
-}
+
 .shadow {
 	stroke: #000;
 	opacity: 0.2;
@@ -69,22 +68,14 @@ body {
   stroke-opacity: 0.5;
 }
 
-.timeline-area {
-	opacity: 0.3;
-	fill: #4991dc;
-}
-.timeline-path {
-	stroke: #4991dc;
-	stroke-width: 2.5px;
-}
 .timeline-axis path, .tick line {
 	fill: none;
-	stroke: #f2f2f2;
+	stroke: #d1d9de;
 	stroke-width: 2px;
 	shape-rendering: crispEdges;
 }
 .timeline-axis text {
-	fill: white;
+	fill: #d1d9de;
 	font-size: 12px;
 }
 .timeline-bar {
@@ -95,4 +86,34 @@ body {
 }
 .timeline-curr {
 	fill: #2eb135;
+}
+text.timeline-xlabel, text.timeline-ylabel {
+	font-size: 15px;
+	fill: #f2f2f2;
+}
+
+.slider-container {
+}
+
+.slider-container text {
+	alignment-baseline: middle; 
+	font-size: 15px;
+	fill: #4991dc;
+}
+
+.speed-axis {
+	fill: none;
+	stroke: #4991dc;
+	stroke-width: 2px;
+	stroke-linecap: round;
+}
+
+.slider-handle {
+	fill: #333a45;
+	stroke: #4991dc;
+	stroke-width: 2px;
+	cursor: pointer;
+}
+text.speed-label-speed {
+	fill: #f2f2f2;
 }
