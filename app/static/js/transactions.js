@@ -279,19 +279,7 @@ function make_vis(datafile) {
 				.attr("class", "land")
 				.attr("d", path);
 
-		get_data(datafile);
-		
-
-		// d3.json(datafile, function(error2, txns) {
-		// 	transactions = txns;
-
-		// 	parse_txns(transactions); 		// add geoJSON features to each txn
-		// 	timeline_cts = 					// update timeline domain, computes cts
-		// 		get_txn_cts(transactions, 0); 
-
-		// 	init_timeline();
-		// 	build_transactions_groups();
-		// });
+		get_data(datafile);		
 	});
 
 	// helper functions -------------------------------------------------------
@@ -379,22 +367,18 @@ function make_vis(datafile) {
 
 		// Case 0: tranactions is empty, so new_txns are the first txns
 		if (!transactions) {
-			console.log("first data");
 			init_visualization(new_txns);
 		}
 		// Case 1: If the start and end of new_txns match the current transactions,
 		// 		   just loop with the same data.
 		else if (min_newtxns == min_currtxns && max_newtxns == max_currtxns 
 				 && n_newtxns == n_currtxns) {
-
-			console.log("looping with same data");
 			reset_visualization(0);
 		}
 		// Case 2: If all new_txns come after the current txns, append them to 
 		// 		   current txns & slice off old txns leaving as many transactions 
 		// 		   as possible without exceeding max_transactions 
 		else if (min_newtxns >= max_currtxns && max_newtxns > max_currtxns) {
-			console.log("appending data");
 			
 			var n_old_keep = max_transactions - new_txns.length,
 				old_txns   = n_old_keep > 0 ? transactions.slice(-n_old_keep) : [],
@@ -418,7 +402,6 @@ function make_vis(datafile) {
 
 		// Case 3: None of the above, just start with new data
 		} else { 
-			console.log("all new data");
 			init_visualization(new_txns);
 		}
 
