@@ -140,7 +140,8 @@ def jsonify(df, action="return", outfile=None):
 		raise Exception("Invalid action or unspecified outfile")
 
 #..............................................................................
-# main
+# Main, enables running this as a script
+
 def main():
 	outfile = "%s_latlong.json" % args.out_base
 

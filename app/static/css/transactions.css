@@ -2,6 +2,10 @@ body {
 	background-color: #333a45;
 	font-family: "Lato", sans-serif;
 }
+#loading {
+	color: #4991dc;
+	font-size: 20px;
+}
 #vis {
 	display: table;
 	margin: 0 auto;
@@ -28,6 +32,7 @@ body {
 
 .ct-label {
 	fill: #2eb135;
+	shape-rendering: crispEdges;
 }
 .map {
 	stroke: none;
@@ -75,6 +80,7 @@ body {
 	shape-rendering: crispEdges;
 }
 .timeline-axis text {
+	shape-rendering: crispEdges;
 	fill: #d1d9de;
 	font-size: 12px;
 }
@@ -104,6 +110,7 @@ text.timeline-xlabel, text.timeline-ylabel {
 }
 
 .slider-container text {
+	shape-rendering: crispEdges;
 	alignment-baseline: middle; 
 	font-size: 15px;
 	fill: #4991dc;

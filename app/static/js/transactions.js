@@ -6,41 +6,30 @@
  *			sky arcs modified from: http://bl.ocks.org/dwtkns/4973620
  */
 
- /*
- TODO:
- 		- sliders for speed/vars
- 		- deal with timeline updates when new data is loaded
- 		- get flask set up
- 		- convert to using margins to offset svg grid components: 
-			- map, timeline, counter, logo, sliders
-		- get data function
-		- refactor
-*/	
-
-
-	// vis functions ----------------------------------------------------------
+function make_vis(datafile) {
+	d3.select("#loading").remove();
 	
-	var data_file  = "data/txns/100_part1_txns_latlong.json"; // "data/txns/100_txns_latlong.json "; //
-	var data_file2 = "data/txns/100_part2_txns_latlong.json";
-
 	// variable sliders
-	var speed_multiplier = 5, // 100x = don't exceed :)
+	var map_file = "../static/data/maps/countries2.topo.json", // world map data
+		update_data_url  = "http://127.0.0.1:5000/update_data",
+		speed_multiplier = 1, // initial speed multiplier
 		txn_duration_in  = 2,
-		txn_duration_out = 1;
-
-	var max_transactions = 50000, // max transactions in the timeline.
-		max_pause_ms = 2000; 	  // deviates from reality more by minimizing time
-							  	  // gap between transactions. decreasing makes the
-								  // the speed slider more responsive, especially for
-								  // slow speeds (because speed change doesn't take
-								  // effect until the next-queued txn fires);
-
-	
-	var countries, transaction_groups, timeline_cts, transactions,
+		txn_duration_out = 1,
+		speed_range      = [1,1000],// speed slider limits
+		max_transactions = 50000, 	// max transactions summarized in the timeline; 
+								  	// without an upper limit, could exceed memory
+		
+		max_pause_ms = 2000, 	  	// Maximum pause time between transaction animations.
+									// Deviates from reality more by minimizing time
+								  	// gap between transactions, but decreasing makes the
+									// the speed slider more responsive, especially for
+									// slow speeds (because speed change doesn't take
+									// effect until the next-queued txn fires);
 		start_delay = 1000,
-		txn_ct   = 0, // cumulative txn count
-		txn_idx  = 0, // idx of current txn
-		time_idx = 0; // idx of timeline count bin
+		txn_ct   = 0, 				// cumulative txn count
+		txn_idx  = 0, 				// idx of current txn
+		time_idx = 0, 				// idx of timeline count bin
+		countries, transaction_groups, timeline_cts, transactions;
 
 	// sizes and margins of all visualization components
 	var visMargins = { top: 0, right: 0, bottom: 0, left: 0 },
@@ -198,7 +187,7 @@
 		slider_height = 100 - slider_margin.top  - slider_margin.bottom + counterMargin.top;
 
 	var speed_scale = d3.scale.linear()
-		.domain([1, 1000]) // x real time
+		.domain(speed_range) // x real time
 		.range([0, slider_width])
 		.clamp(true); 
 
@@ -244,7 +233,10 @@
 	var speedlabel_label = slider_container.append("text")
 		.attr("class", "speed-label-label")
 		.text("real time")
-		.attr("transform", "translate(" + (+slider_width + +speedlabel_speed[0][0].offsetWidth + +slider_margin.label_space) + "," + slider_height/2 + ")");
+		.attr("transform", "translate(" + (+slider_width + 
+			  							   +speedlabel_speed[0][0].offsetWidth + 
+			  							   +slider_margin.label_space) + 
+			            			  "," + slider_height/2 + ")");
 
 	speed_slider.call(speed_brush.event);
 	update_speedlabel();
@@ -259,7 +251,6 @@
 		.attr("width", "300%").attr("height", "300%")
 		.append("feGaussianBlur")
 		.attr("stdDeviation", 3);
-
 
 	// layer 0: glow
 	// TODO: make background circle for glow
@@ -280,27 +271,37 @@
 
 	var g = map.append("g");
 	
-	d3.json("data/maps/countries2.topo.json", function(error, world) {	
-		d3.json(data_file, function(error2, txns) {
-			transactions = txns;
-
-			// layer 3, land
-			countries = g.append("path")
+	d3.json(map_file, function(error, world) {	
+		
+		// layer 3, land
+		countries = g.append("path")
 				.datum( topojson.feature(world, world.objects.countries) )
 				.attr("class", "land")
 				.attr("d", path);
 
+		get_data(datafile);
+		
 
-			parse_txns(transactions); 		// add geoJSON features to each txn
-			timeline_cts = 					// update timeline domain, computes cts
-				get_txn_cts(transactions, 0); 
+		// d3.json(datafile, function(error2, txns) {
+		// 	transactions = txns;
 
-			init_timeline();
-			build_transactions_groups();
-		});
+		// 	parse_txns(transactions); 		// add geoJSON features to each txn
+		// 	timeline_cts = 					// update timeline domain, computes cts
+		// 		get_txn_cts(transactions, 0); 
+
+		// 	init_timeline();
+		// 	build_transactions_groups();
+		// });
 	});
 
 	// helper functions -------------------------------------------------------
+
+	function clear_visualization() {
+		console.log("clearing vis");
+		transactions = [];
+		timeline_cts = [];
+		init_timeline();
+	}
 
  	/*
  	 *
@@ -311,7 +312,7 @@
 			
 			time_idx = 0;
 			txn_idx  = 0;
-			build_transactions_groups() // starts recursive timer
+			build_transactions_groups(); // starts recursive timer
 	}
 
 	/*
@@ -329,30 +330,72 @@
 		return timeline_cts;
 	}
 
+	function update_data(old_datafile) {
+		var url = update_data_url + "?prev_datafile=" + old_datafile;
+
+		d3.xhr(url, function(error, resp) {
+			if (error) { 
+				clear_visualization();
+				return error;
+			}
+			console.log(resp.response);
+			get_data(resp.response);
+		});
+	}	
+
 	/*
 	 * Requests new data, parses it, and calls update_transaction_data
 	 */
-	function get_data(data_file) {
-		// TODO: I think update txn data should actually call this not vice versa
-		d3.json(data_file2, function(error, new_txns) {
-			if (error) { return console.log(error); }
-			
+	function get_data(curr_datafile) {
+		d3.json(curr_datafile, function(error, new_txns) {
+			if (error) { 
+				clear_visualization();
+				return console.log(error); 
+			}
+			console.log("new data");
 			parse_txns(new_txns); 
 			update_transaction_data(new_txns);
 		});
 	}
-	
+
+	function init_visualization(txns) {
+		transactions = txns;
+		timeline_cts = get_txn_cts(transactions, 0);
+		init_timeline();
+		build_transactions_groups();
+	}
 
 	/* 
-	 *
+	 * 
 	 */
 	function update_transaction_data(new_txns) {
-		// Case 1: if new_txns are indeed new, append them to current 
-		//  	   transactions, slice to get as many transactions as possible 
-		// 		   without exceeding max_transactions 
-		if (new_txns[0].time.getTime() >= 
-			transactions[transactions.length - 1].time.getTime()) {
+		var n_newtxns    = new_txns.length,
+			n_currtxns   = transactions ? // if defined, get total
+						   (transactions.total_txns ? transactions.total_txns : transactions.length) : 0,
+			min_newtxns  = new_txns[0].time.getTime(),
+			max_newtxns  = new_txns[new_txns.length-1].time.getTime(),
+			min_currtxns = transactions ? transactions[0].time.getTime() : undefined,
+			max_currtxns = transactions ? transactions[transactions.length - 1].time.getTime() : undefined;
 
+		// Case 0: tranactions is empty, so new_txns are the first txns
+		if (!transactions) {
+			console.log("first data");
+			init_visualization(new_txns);
+		}
+		// Case 1: If the start and end of new_txns match the current transactions,
+		// 		   just loop with the same data.
+		else if (min_newtxns == min_currtxns && max_newtxns == max_currtxns 
+				 && n_newtxns == n_currtxns) {
+
+			console.log("looping with same data");
+			reset_visualization(0);
+		}
+		// Case 2: If all new_txns come after the current txns, append them to 
+		// 		   current txns & slice off old txns leaving as many transactions 
+		// 		   as possible without exceeding max_transactions 
+		else if (min_newtxns >= max_currtxns && max_newtxns > max_currtxns) {
+			console.log("appending data");
+			
 			var n_old_keep = max_transactions - new_txns.length,
 				old_txns   = n_old_keep > 0 ? transactions.slice(-n_old_keep) : [],
 				new_txns   = new_txns.slice(-max_transactions);
@@ -363,17 +406,20 @@
 			// are displayed in the histogram; we then update transactions to include
 			// only the new transactions because the old histogram counts will be filled
 			// and we want arcs to feed from only the new point in time/new values
+			var n_total_txns = transactions.length;
 			timeline_cts = get_txn_cts(transactions, 1000); 
 			transactions = new_txns; 
-			
+			transactions.total_txns = n_total_txns;
+
 			var fillto_idx = get_fillto_idx(old_txns, timeline_cts);
 
 			init_timeline();
 			reset_visualization(fillto_idx);
 
+		// Case 3: None of the above, just start with new data
 		} else { 
-		// Case 2: new_txns are the same as current transactions, just loop
-			reset_visualization(0);
+			console.log("all new data");
+			init_visualization(new_txns);
 		}
 
 	}
@@ -449,14 +495,14 @@
 	 * (so it's in front of other rect) that displays the number of counts for the bin.
 	 */
 	function mouseover_bin(rect, d, i) {
-		d3.select("#bar-ct-label").remove(); // cleanup in case of weird mouseover error
+		d3.select(rect.parentNode).select("#bar-ct-label").remove(); // cleanup in case of mouse errors
 		d3.select(rect).classed("timeline-hover", true);
 
 		var text_anchor = i < timeline_cts.length / 2 ? "start" : "end",
 			translate_x = i < timeline_cts.length / 2 ? 
 						  +timelineMargins.ctlabel_x : 2*timelineMargins.ctlabel_x,
 			text = num_with_commas(d.curr_y) + 
-				   ( d.curr_y > 1 ? " transactions" : " transaction" );
+				   ( d.curr_y == 1 ? " transaction" : " transactions" );
 
 		var ct_label = d3.select(rect.parentNode).append("text")
 			.attr("id", "bar-ct-label");
@@ -603,7 +649,7 @@
 		// base case: no more transactions, 
 		if (txn_idx >= transaction_groups.size()) { 
 			return function() { 
-				get_data(data_file);
+				update_data(datafile);
 				return true; 
 			};
 		} else if (txn_idx == transaction_groups.size() - 1) { // last transaction
@@ -744,3 +790,4 @@
 	    return[ projection(source), sky(mid), projection(target) ];
 	}
 
+}
