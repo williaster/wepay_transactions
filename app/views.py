@@ -1,4 +1,8 @@
 info="""Flask view mapping for the WePay transactions visualization app.
+
+        @param  DATA_DIR
+        @param  REL_DATA_DIR
+        @param  CALLBACK_DOMAIN
      """
 
 __author__ = "christopher c williams"
@@ -11,13 +15,17 @@ import pandas as pd
 import glob
 import os
 
-# The base directory for all txns files to be served
-DATA_DIR     = "%s/static/data/txns" % os.path.dirname( os.path.realpath(__file__) )
-REL_DATA_DIR = "../static/data/txns"
+DATA_DIR        = "%s/static/data/txns" % os.path.dirname( os.path.realpath(__file__) )
+REL_DATA_DIR    = "../static/data/txns"
+CALLBACK_DOMAIN = "http://127.0.0.1:5000"
+
 #..............................................................................
 # Helper functions for views
 def get_datafile(data_id):
-    """
+    """Attempts to locate a file in the global DATA_DIR directory based on the
+       data_id param. First trys to find a .json file matching the name. If it
+       cannot, it tries .csv (and will eventually parse it and return the json),
+       and if this fails it returns the empty string.
     """
     data_relpath = ""
     
@@ -36,7 +44,7 @@ def get_datafile(data_id):
 
 def get_mostrecent_file(directory, pattern):
     """Returns the filename of the most recently updated file in the passed
-       directory
+       directory, that matches the passed pattern, e.g., *.json
     """
     # Find all *.json files in the data directory, sort by most recently modified
     files = [ f for f in glob.glob(os.path.join(DATA_DIR, pattern)) ]
@@ -63,10 +71,14 @@ def wepay(methods=["GET"]):
     """ 
     title    = "WePay transaction visualization"
 
+    loop         = request.args.get("loop") if request.args.get("loop") else "true"
+    maxpause_ms  = int(request.args.get("maxpause")) if request.args.get("maxpause") else 1500 
     data_id      = request.args.get("id")
     data_relpath = get_datafile(data_id)
 
-    return render_template("wepay.html", title=title, datafile=data_relpath)
+    return render_template("wepay.html", title=title, datafile=data_relpath,
+                           loopbool_as_str=loop, maxpause_ms=maxpause_ms, 
+                           callback_domain=CALLBACK_DOMAIN)
 
 @app.route('/update_data')
 def update_data(methods=["GET"]):

@@ -90,6 +90,10 @@ body {
 	shape-rendering: crispEdges;
 	fill: #4991dc;
 }
+rect.bar-ct-label-bg {
+	fill: #4991dc;
+	opacity: 0.3;
+}
 .timeline-curr {
 	fill: #2eb135;
 }

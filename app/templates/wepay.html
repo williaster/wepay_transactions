@@ -22,10 +22,13 @@
 	    <script src="../static/js/transactions.js" type="text/javascript"></script>
         <script type="text/javascript">
             window.onload = function() {
-                var datafile = "{{ datafile }}";
+                var callback_domain = "{{ callback_domain }}",
+                    maxpause_ms     = parseInt( "{{ maxpause_ms }}" ),
+                    datafile        = "{{ datafile }}",
+                    loop            = eval( {{loopbool_as_str}} );
                 
                 if (datafile.length > 0) {
-                    make_vis(datafile);
+                    make_vis(datafile, loop, maxpause_ms, callback_domain);
                 
                 } else { // error finding file
                     d3.select("#loading")

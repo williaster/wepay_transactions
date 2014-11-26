@@ -6,26 +6,31 @@
  *			sky arcs modified from: http://bl.ocks.org/dwtkns/4973620
  */
 
-function make_vis(datafile) {
+// add args:
+//
+// update bar cts
+// fig out python in pipeline
+// refactor
+
+function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 	d3.select("#loading").remove();
-	
+
 	// variable sliders
 	var map_file = "../static/data/maps/countries2.topo.json", // world map data
-		update_data_url  = "http://127.0.0.1:5000/update_data",
 		speed_multiplier = 1, // initial speed multiplier
 		txn_duration_in  = 2,
 		txn_duration_out = 1,
 		speed_range      = [1,1000],// speed slider limits
-		max_transactions = 50000, 	// max transactions summarized in the timeline; 
+		max_transactions = 50, 	// max transactions summarized in the timeline; 
 								  	// without an upper limit, could exceed memory
 		
-		max_pause_ms = 2000, 	  	// Maximum pause time between transaction animations.
+		max_pause_ms = maxpause_ms,	// Maximum pause time between transaction animations.
 									// Deviates from reality more by minimizing time
 								  	// gap between transactions, but decreasing makes the
 									// the speed slider more responsive, especially for
 									// slow speeds (because speed change doesn't take
 									// effect until the next-queued txn fires);
-		start_delay = 1000,
+		start_delay = 2000,
 		txn_ct   = 0, 				// cumulative txn count
 		txn_idx  = 0, 				// idx of current txn
 		time_idx = 0, 				// idx of timeline count bin
@@ -186,7 +191,7 @@ function make_vis(datafile) {
 		slider_width  = 450 - slider_margin.left - slider_margin.right,
 		slider_height = 100 - slider_margin.top  - slider_margin.bottom + counterMargin.top;
 
-	var speed_scale = d3.scale.linear()
+	var speed_scale = d3.scale.log()
 		.domain(speed_range) // x real time
 		.range([0, slider_width])
 		.clamp(true); 
@@ -285,7 +290,7 @@ function make_vis(datafile) {
 	// helper functions -------------------------------------------------------
 
 	function clear_visualization() {
-		console.log("clearing vis");
+		// console.log("clearing vis");
 		transactions = [];
 		timeline_cts = [];
 		init_timeline();
@@ -318,17 +323,26 @@ function make_vis(datafile) {
 		return timeline_cts;
 	}
 
+	/*
+	 * Updates data by, simply looping with the current data if the loop
+	 * variable is true. Else, issues a xhr request to the server to update 
+	 * data. Currently this is done by passing the previous datafile.
+	 */ 
 	function update_data(old_datafile) {
-		var url = update_data_url + "?prev_datafile=" + old_datafile;
+		if (loop) { // just loop
+			update_transaction_data(transactions); 
+		} else {
+			var url = callback_domain + "/update_data?prev_datafile=" + old_datafile;
 
-		d3.xhr(url, function(error, resp) {
-			if (error) { 
-				clear_visualization();
-				return error;
-			}
-			console.log(resp.response);
-			get_data(resp.response);
-		});
+			d3.xhr(url, function(error, resp) {
+				if (error) { 
+					clear_visualization();
+					return error;
+				}
+				datfile = resp.response;
+				get_data(datfile);
+			});
+		}
 	}	
 
 	/*
@@ -340,7 +354,6 @@ function make_vis(datafile) {
 				clear_visualization();
 				return console.log(error); 
 			}
-			console.log("new data");
 			parse_txns(new_txns); 
 			update_transaction_data(new_txns);
 		});
@@ -358,7 +371,7 @@ function make_vis(datafile) {
 	 */
 	function update_transaction_data(new_txns) {
 		var n_newtxns    = new_txns.length,
-			n_currtxns   = transactions ? // if defined, get total
+			n_currtxns   = transactions ? // if defined, array was merged and this was total length. 
 						   (transactions.total_txns ? transactions.total_txns : transactions.length) : 0,
 			min_newtxns  = new_txns[0].time.getTime(),
 			max_newtxns  = new_txns[new_txns.length-1].time.getTime(),
@@ -379,7 +392,7 @@ function make_vis(datafile) {
 		// 		   current txns & slice off old txns leaving as many transactions 
 		// 		   as possible without exceeding max_transactions 
 		else if (min_newtxns >= max_currtxns && max_newtxns > max_currtxns) {
-			
+
 			var n_old_keep = max_transactions - new_txns.length,
 				old_txns   = n_old_keep > 0 ? transactions.slice(-n_old_keep) : [],
 				new_txns   = new_txns.slice(-max_transactions);
@@ -416,7 +429,8 @@ function make_vis(datafile) {
 			fillto_idx   = -1;
 
 		// note: this does not guarantee that the counts around the old to new interface 
-		//		 is perfect but it is within a few counts;
+		//		 is perfect but it is within a few counts; specifically, old data that falls
+		// 		 into a new bin, is not represented in the final displayed counts in that bin.
 		for (var bin_idx = 0; bin_idx < timeline_cts.length; bin_idx++) {
 
 			if (prev_maxtime > timeline_cts[bin_idx].x.getTime()) {
@@ -469,7 +483,6 @@ function make_vis(datafile) {
   		speed_handle.attr("cx", speed_scale(curr_speed));
   		speed_multiplier = curr_speed; // determines live
   		update_speedlabel(); // update speed text
-
 	}
 
 
@@ -478,25 +491,55 @@ function make_vis(datafile) {
 	 * (so it's in front of other rect) that displays the number of counts for the bin.
 	 */
 	function mouseover_bin(rect, d, i) {
-		d3.select(rect.parentNode).select("#bar-ct-label").remove(); // cleanup in case of mouse errors
+		d3.select("g[id^='bar-ct-label-']").remove();
 		d3.select(rect).classed("timeline-hover", true);
 
-		var text_anchor = i < timeline_cts.length / 2 ? "start" : "end",
+		add_bar_ctlabel(timeline_hist,d,i);
+
+		// var text_anchor = i < timeline_cts.length / 2 ? "start" : "end",
+		// 	translate_x = i < timeline_cts.length / 2 ? 
+		// 				  +timelineMargins.ctlabel_x : 2*timelineMargins.ctlabel_x,
+		// 	text = num_with_commas(d.curr_y) + 
+		// 		   ( d.curr_y == 1 ? " transaction" : " transactions" );
+
+		// var ct_label = d3.select(rect.parentNode).append("g")
+		// 	.attr("class", "bar-ct-label")
+		// 	.attr("id", "bar-ct-label-" + i)
+		// 	.attr("transform", 
+		// 		  "translate(" + (+txn_timeline_x(d.x) + translate_x) + "," 
+		// 					   + (+txn_timeline_y(d.curr_y) + timelineMargins.ctlabel_y)+ ")");
+			
+		// var ct_label_ct = ct_label.append("text")
+		// 	.attr("text-anchor", text_anchor)
+		// 	.text(text);
+	}
+
+	/*
+	 * adds a tooltip to the specified txn timeline bin index displaying 
+	 * with the bin's curr_y as the numbuer of transactions.
+	 */
+	 function add_bar_ctlabel(selection, d, i) {
+	 	d3.select("g[id^='bar-ct-label-']").remove();
+
+	 	var text_anchor = i < timeline_cts.length / 2 ? "start" : "end",
 			translate_x = i < timeline_cts.length / 2 ? 
 						  +timelineMargins.ctlabel_x : 2*timelineMargins.ctlabel_x,
 			text = num_with_commas(d.curr_y) + 
 				   ( d.curr_y == 1 ? " transaction" : " transactions" );
 
-		var ct_label = d3.select(rect.parentNode).append("text")
-			.attr("id", "bar-ct-label");
-
-		ct_label.attr("class", "bar-ct-label")
+		var ct_label = selection.append("g") // d3.select(rect.parentNode)
+			.attr("class", "bar-ct-label")
+			.attr("id", "bar-ct-label-" + i)
 			.attr("transform", 
 				  "translate(" + (+txn_timeline_x(d.x) + translate_x) + "," 
-							   + (+txn_timeline_y(d.curr_y) + timelineMargins.ctlabel_y)+ ")")
+							   + (+txn_timeline_y(d.curr_y) + timelineMargins.ctlabel_y)+ ")");
+			
+		var ct_label_ct = ct_label.append("text")
 			.attr("text-anchor", text_anchor)
 			.text(text);
-	}
+
+
+	 }
 
 	/*
 	 * Removes the hover class from the passed DOM rectangle.
@@ -504,7 +547,7 @@ function make_vis(datafile) {
 	 */
 	function mouseout_bin(rect, d, i) {
 		d3.select(rect).classed("timeline-hover", false);
-		d3.select("#bar-ct-label").remove();
+		d3.select("g[id^='bar-ct-label-']").remove();
 	}
 
 	// Initializes the timeline
@@ -544,9 +587,29 @@ function make_vis(datafile) {
 				return txn_timeline_x( d.x1 ) - txn_timeline_x( d.x );
 			})
 		;
+		
+		var label = d3.select("g[id^='bar-ct-label-']");
+		if (label[0][0]) { // update text label if it exists
+			
+			var bar_idx   = parseInt( label.attr("id").split("-").slice(-1) ),
+				bar_bin   = timeline_cts[bar_idx],
+				new_text  = bar_bin.curr_y == 1 ? bar_bin.curr_y + " trasaction" :
+												  bar_bin.curr_y + " trasactions";
+
+			add_bar_ctlabel(timeline_hist, bar_bin, bar_idx);
+
+			var start = label.attr("transform");
+			label.select("text")
+				.attr("class", "bar-ct-label")
+				.attr("transform", 
+				  	   start)
+				.text(new_text);
+		}	
+
 	}
 
-	// Manages counts for txn timeline bins, including updating the time bin idx,
+	// Manages changes in displayed counts for a single txn_idx/txn increment. 
+	// increases ct in curr txn timeline bin, including updating the time bin idx,
 	// and updating "timeline-curr" classes based on the current timeline bin.
 	function add_timeline_counts() {
 		var curr_txn 	  = transactions[txn_idx],
@@ -559,12 +622,12 @@ function make_vis(datafile) {
 			d3.select(timeline_bars[0][time_idx]).classed("timeline-curr", false);
 			time_idx++;
 			return add_timeline_counts();
-		} else { 
+		} else { // highlight curr bar, increment count in this bin and update display
 			d3.select(timeline_bars[0][time_idx]).classed("timeline-curr", true);
 			curr_bin.curr_y++;
 			update_timeline();
 		}
-		if (is_last_txn) {
+		if (is_last_txn) { // remove highlight if last txn
 			d3.select(timeline_bars[0][time_idx]).classed("timeline-curr", false);
 		}
 	}
