@@ -1,8 +1,8 @@
 #!/Users/christopherwilliams/dotfiles/virtualenvs/.virtualenvs/lighttable/bin/python
 info="""Module for parsing a Pandas DataFrame of transactions, or script for 
-		reading a *.csv file of transactions from file, to map payer/payee zip 
-		codes to longitude, latitude values which d3.js requires. Provides 
-		methods for returning parsed data as JSON or writing to file.  
+		    reading a *.csv file of transactions from file, to map payer/payee zip 
+		    codes to longitude, latitude values which d3.js requires. Provides 
+		    methods for returning parsed data as JSON or writing to file.  
      """
 
 __author__ = "christopher c williams"
@@ -138,6 +138,18 @@ def jsonify(df, action="return", outfile=None):
 		return
 	else:
 		raise Exception("Invalid action or unspecified outfile")
+
+def csv_to_parsedjson(file_csv, outfile=None):
+  """Takes a csv filename as input, parses it, and either returns the data as
+     json or writes json to the specified outfile (including path).
+  """
+  df_unparsed  = pd.read_csv( file_csv )
+  df_parsed    = parse_txns( df_unparsed )
+
+  if outfile:
+    jsonify(df_parsed, action="write", outfile=outfile)
+  else:
+    return jsonify(df, action="return", outfile=None)
 
 #..............................................................................
 # Main, enables running this as a script

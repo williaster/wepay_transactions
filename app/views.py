@@ -27,15 +27,21 @@ def get_datafile(data_id):
        cannot, it tries .csv (and will eventually parse it and return the json),
        and if this fails it returns the empty string.
     """
-    data_relpath = ""
-    
+    data_relpath  = ""
+    json_fullpath = "%s/%s.json" % (DATA_DIR, data_id)
+    json_relpath  = "%s/%s.json" % (REL_DATA_DIR, data_id)
+    csv_fullpath  = "%s/%s.csv"  % (DATA_DIR, data_id)
+
     # first try to find a json version of the file (already parsed)
-    if os.path.isfile("%s/%s.json" % (DATA_DIR, data_id)):
-        data_relpath = "%s/%s.json" % (REL_DATA_DIR, data_id) 
+    if os.path.isfile(json_fullpath):
+        data_relpath = json_relpath
 
     # next try to find a .csv version of the file (not yet parsed)
-    elif os.path.isfile("%s/%s.csv" % (DATA_DIR, data_id)):
-        pass
+    elif os.path.isfile(csv_fullpath):
+        print "Parsing transactions from %s, writing to %s" % (json_fullpath, csv_fullpath)
+        
+        TxnsPrsr.csv_to_parsedjson(csv_fullpath, outfile=json_fullpath)
+        data_relpath = json_relpath
 
     else: # no luck
         print "%s/%s.json nor *.csv not found" % (DATA_DIR, data_id)
@@ -94,4 +100,25 @@ def update_data(methods=["GET"]):
         new_relpath = "%s/%s" % (REL_DATA_DIR, mostrecent_file)
 
     return new_relpath
+
+
+@app.route('/wepay_refactor')
+def wepay_refactor(methods=["GET"]):
+    """Base view that serves the WePay HTML page. Handles a GET request and
+       expects a reques 'id' parameter which serves as an identifier for the
+       data to be loaded and served with the page. 
+
+       Subsequent requests for data (e.g., in the form of XHR/AJAX requests)
+       are expected to be made to the /get_data view.
+    """ 
+    title    = "WePay transaction visualization"
+
+    loop         = request.args.get("loop") if request.args.get("loop") else "true"
+    maxpause_ms  = int(request.args.get("maxpause")) if request.args.get("maxpause") else 1500 
+    data_id      = request.args.get("id")
+    data_relpath = get_datafile(data_id)
+
+    return render_template("wepay_refactor.html", title=title, datafile=data_relpath,
+                           loopbool_as_str=loop, maxpause_ms=maxpause_ms, 
+                           callback_domain=CALLBACK_DOMAIN)
 

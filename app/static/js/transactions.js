@@ -8,8 +8,8 @@
 
 // add args:
 //
-// update bar cts
-// fig out python in pipeline
+// last file does not update on eg 3rd data requests
+// 
 // refactor
 
 function make_vis(datafile, loop, maxpause_ms, callback_domain) {
@@ -20,8 +20,9 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 		speed_multiplier = 1, // initial speed multiplier
 		txn_duration_in  = 2,
 		txn_duration_out = 1,
+		txn_lifetime     = 800,
 		speed_range      = [1,1000],// speed slider limits
-		max_transactions = 50, 	// max transactions summarized in the timeline; 
+		max_transactions = 50000, 	// max transactions summarized in the timeline; 
 								  	// without an upper limit, could exceed memory
 		
 		max_pause_ms = maxpause_ms,	// Maximum pause time between transaction animations.
@@ -37,62 +38,69 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 		countries, transaction_groups, timeline_cts, transactions;
 
 	// sizes and margins of all visualization components
-	var visMargins = { top: 0, right: 0, bottom: 0, left: 0 },
-		visWidth   = 1200 - visMargins.left - visMargins.right,
-		visHeight  = 650  - visMargins.top  - visMargins.bottom;
+	var vis_margins = { top: 0, right: 0, bottom: 0, left: 0 },
+		vis_width   = 1200 - vis_margins.left - vis_margins.right,
+		vis_height  = 650  - vis_margins.top  - vis_margins.bottom;
 	
-	var mapMargins = { top: 0, right: 40, bottom: 0.24*visHeight, left: 0.2*visWidth },
-		mapWidth   = 1200  - mapMargins.left - mapMargins.right,
-		mapHeight  = 650   - mapMargins.top  - mapMargins.bottom;	
+	var map_margins = { top: 0, right: 40, bottom: 0.24*vis_height, left: 0.2*vis_width },
+		map_width   = 1200  - map_margins.left - map_margins.right,
+		map_height  = 650   - map_margins.top  - map_margins.bottom;	
 
-	var timelineMargins = { top: mapHeight + mapMargins.top + 20,
-							right: mapMargins.right, 
+	var timeline_margins = { top: map_height + map_margins.top + 20,
+							right: map_margins.right, 
 							bottom: 40, 
-							left: mapMargins.left, 
+							left: map_margins.left, 
 							ctlabel_x: 5, ctlabel_y: -5},
-		timelineWidth   = mapWidth,
-		timelineHeight  = visHeight - timelineMargins.top - timelineMargins.bottom;
+		timeline_width   = map_width,
+		timeline_height  = vis_height - timeline_margins.top - timeline_margins.bottom;
 
-	var logoMargin = { top: 100, right: 0, bottom: 0, left: 25, we_pay_margin: 1 },
-		logoWidth  = 300 - logoMargin.left - logoMargin.right,
-		logoHeight = 200 - logoMargin.top  - logoMargin.bottom;
+	var logo_margin = { top: 100, right: 0, bottom: 0, left: 25, we_pay_margin: 1 },
+		logo_width  = 300 - logo_margin.left - logo_margin.right,
+		logo_height = 200 - logo_margin.top  - logo_margin.bottom;
 
-	var counterMargin = { top: logoHeight + logoMargin.top + logoMargin.bottom,
-						  right: logoMargin.right, 
-						  bottom: logoMargin.bottom, 
-						  left: logoMargin.left },
+	var counterMargin = { top: logo_height + logo_margin.top + logo_margin.bottom,
+						  right: logo_margin.right, 
+						  bottom: logo_margin.bottom, 
+						  left: logo_margin.left },
 		counterWidth  = 300 - counterMargin.left - counterMargin.right,
 		counterHeight = 300 - counterMargin.top  - counterMargin.bottom;
+
+
+	console.log(counterMargin)
+	console.log(counterWidth)
+	console.log(counterHeight)
+
 
 	// The actual svg components, these handles are added to below
 	var vis = d3.select("#vis").append("svg")
 		.attr("class", "vis")
-		.attr("width",  visWidth)
-		.attr("height", visHeight);
+		.attr("width",  vis_width)
+		.attr("height", vis_height);
 
 	var map = vis.append("svg")
 		.attr("class", "map")
-		.attr("width",  mapWidth + mapMargins.left + mapMargins.right)
-		.attr("height", mapHeight+ mapMargins.top)
+		.attr("width",  map_width + map_margins.left + map_margins.right)
+		.attr("height", map_height+ map_margins.top)
 	  .append("g")
-		.attr("transform", "translate(" + mapMargins.left + ", " + mapMargins.top + ")")
+		.attr("transform", "translate(" + map_margins.left + ", " + map_margins.top + ")")
 
 	// WePay logo 
 	var logo = vis.append("svg")
 		.attr("class", "logo")
-		.attr("width",  logoWidth  + logoMargin.left + logoMargin.right)
-		.attr("height", logoHeight + logoMargin.top  + logoMargin.bottom)
+		.attr("width",  logo_width  + logo_margin.left + logo_margin.right)
+		.attr("height", logo_height + logo_margin.top  + logo_margin.bottom)
 	  .append("g")
-	  	.attr("transform", "translate(" + logoMargin.left + ", " + logoMargin.top + ")");
+	  	.attr("transform", "translate(" + logo_margin.left + ", " + logo_margin.top + ")")
+	  	.append("text");
 	  
-	var we = logo.append("text")
+	var we = logo.append("tspan")
 		.attr("class", "blue")
 		.text("we");
 
-	var pay = logo.append("text")
+	var pay = logo.append("tspan")
 		.attr("class", "green")
 		.text("pay")
-		.attr("transform", "translate(" + (+we[0][0].offsetWidth + logoMargin.we_pay_margin) + ",0)");
+		.attr("transform", "translate(" + (+we[0][0].offsetWidth + logo_margin.we_pay_margin) + ",0)");
 
 	// Transaction counter
 	var txn_counter = vis.append("svg")
@@ -115,33 +123,33 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 	var projection = d3.geo.orthographic()
 	    .scale(470)
 	    .rotate([105,-10,0]) 			// center on USA
-	    .translate([mapWidth / 2, mapHeight]) // upper hemisphere only
+	    .translate([map_width / 2, map_height]) // upper hemisphere only
 	    .clipAngle(90)
 	    .precision(.1);
 
 	var sky = d3.geo.orthographic()
 	    .scale(1.4 * projection.scale()) // projection scale differential determines 3D height of arcs
 	    .rotate([105,-10,0])
-	    .translate([mapWidth / 2, mapHeight])
+	    .translate([map_width / 2, map_height])
 	    .clipAngle(90);
 
 	// Transaction count timeline 
 	var timeline = vis.append("svg")
 		.attr("class", "txn-timeline")
-		.attr("width",  timelineWidth + timelineMargins.left + timelineMargins.right)
-		.attr("height", timelineHeight + timelineMargins.top + timelineMargins.bottom)
+		.attr("width",  timeline_width + timeline_margins.left + timeline_margins.right)
+		.attr("height", timeline_height + timeline_margins.top + timeline_margins.bottom)
 	  .append("g")
-		.attr("transform", "translate(" + timelineMargins.left + ", " + timelineMargins.top + ")");
+		.attr("transform", "translate(" + timeline_margins.left + ", " + timeline_margins.top + ")");
 	
 	var n_timeline_bins  = 75, // only approx, depends on vals
 		n_timeline_ticks = 15,
 		timeline_bars, timeline_g;
 
 	var txn_timeline_x = d3.time.scale()
-		.range([0, timelineWidth]);
+		.range([0, timeline_width]);
 
 	var txn_timeline_y = d3.scale.linear()
-		.range([timelineHeight, 0]);
+		.range([timeline_height, 0]);
 
 	var txn_timeline_xaxis = d3.svg.axis()
 		.scale(txn_timeline_x)
@@ -153,18 +161,18 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 
 	var timeline_axis = timeline.append("g")
 		.attr("class", "timeline-axis")
-		.attr("transform", "translate(0," + timelineHeight + ")");
+		.attr("transform", "translate(0," + timeline_height + ")");
 
 	timeline_axis.append("text") // y-label
 		.attr("class", "timeline-ylabel")
 		.attr("text-anchor", "middle")
-		.attr("transform", "translate(-10," + -timelineHeight/2 + ")rotate(-90)")
+		.attr("transform", "translate(-10," + -timeline_height/2 + ")rotate(-90)")
 	  	.text("# Transactions");
 
 	timeline_axis.append("text") // x-label
 		.attr("class", "timeline-xlabel")
 		.attr("text-anchor", "middle")
-		.attr("transform", "translate(" + timelineWidth / 2 + "," + 0.9*timelineMargins.bottom + ")")
+		.attr("transform", "translate(" + timeline_width / 2 + "," + 0.9*timeline_margins.bottom + ")")
 	  	.text("Time");
 
 
@@ -277,7 +285,6 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 	var g = map.append("g");
 	
 	d3.json(map_file, function(error, world) {	
-		
 		// layer 3, land
 		countries = g.append("path")
 				.datum( topojson.feature(world, world.objects.countries) )
@@ -339,8 +346,8 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 					clear_visualization();
 					return error;
 				}
-				datfile = resp.response;
-				get_data(datfile);
+				datafile = resp.response;
+				get_data(datafile);
 			});
 		}
 	}	
@@ -404,6 +411,7 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 			// only the new transactions because the old histogram counts will be filled
 			// and we want arcs to feed from only the new point in time/new values
 			var n_total_txns = transactions.length;
+
 			timeline_cts = get_txn_cts(transactions, 1000); 
 			transactions = new_txns; 
 			transactions.total_txns = n_total_txns;
@@ -419,6 +427,8 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 		}
 
 	}
+
+	function concat_txns() {};
 
 	/*
 	 * Returns the maximum idx of timeline_counts bin that contains one or more txns 
@@ -485,33 +495,13 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
   		update_speedlabel(); // update speed text
 	}
 
-
 	/*
 	 * Adds a hover class to the bin rect, and adds a text object to the rect parent
 	 * (so it's in front of other rect) that displays the number of counts for the bin.
 	 */
 	function mouseover_bin(rect, d, i) {
-		d3.select("g[id^='bar-ct-label-']").remove();
 		d3.select(rect).classed("timeline-hover", true);
-
 		add_bar_ctlabel(timeline_hist,d,i);
-
-		// var text_anchor = i < timeline_cts.length / 2 ? "start" : "end",
-		// 	translate_x = i < timeline_cts.length / 2 ? 
-		// 				  +timelineMargins.ctlabel_x : 2*timelineMargins.ctlabel_x,
-		// 	text = num_with_commas(d.curr_y) + 
-		// 		   ( d.curr_y == 1 ? " transaction" : " transactions" );
-
-		// var ct_label = d3.select(rect.parentNode).append("g")
-		// 	.attr("class", "bar-ct-label")
-		// 	.attr("id", "bar-ct-label-" + i)
-		// 	.attr("transform", 
-		// 		  "translate(" + (+txn_timeline_x(d.x) + translate_x) + "," 
-		// 					   + (+txn_timeline_y(d.curr_y) + timelineMargins.ctlabel_y)+ ")");
-			
-		// var ct_label_ct = ct_label.append("text")
-		// 	.attr("text-anchor", text_anchor)
-		// 	.text(text);
 	}
 
 	/*
@@ -523,7 +513,7 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 
 	 	var text_anchor = i < timeline_cts.length / 2 ? "start" : "end",
 			translate_x = i < timeline_cts.length / 2 ? 
-						  +timelineMargins.ctlabel_x : 2*timelineMargins.ctlabel_x,
+						  +timeline_margins.ctlabel_x : 2*timeline_margins.ctlabel_x,
 			text = num_with_commas(d.curr_y) + 
 				   ( d.curr_y == 1 ? " transaction" : " transactions" );
 
@@ -532,7 +522,7 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 			.attr("id", "bar-ct-label-" + i)
 			.attr("transform", 
 				  "translate(" + (+txn_timeline_x(d.x) + translate_x) + "," 
-							   + (+txn_timeline_y(d.curr_y) + timelineMargins.ctlabel_y)+ ")");
+							   + (+txn_timeline_y(d.curr_y) + timeline_margins.ctlabel_y)+ ")");
 			
 		var ct_label_ct = ct_label.append("text")
 			.attr("text-anchor", text_anchor)
@@ -569,7 +559,7 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 	
 		timeline_bars = timeline_g.append("rect")
 			.attr("width",  function(d) { return txn_timeline_x( d.x1 ) - txn_timeline_x( d.x ); })
-			.attr("height", function(d) { return timelineHeight - txn_timeline_y( d.curr_y ); });
+			.attr("height", function(d) { return timeline_height - txn_timeline_y( d.curr_y ); });
 			
 	}
 
@@ -581,7 +571,7 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 
 		timeline_bars
 			.attr("height", function(d) { 
-				return timelineHeight - txn_timeline_y( d.curr_y ); 
+				return timeline_height - txn_timeline_y( d.curr_y ); 
 			})
 			.attr("width", function(d) {
 				return txn_timeline_x( d.x1 ) - txn_timeline_x( d.x );
@@ -785,6 +775,7 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 				.duration(arc_length*txn_duration_in)
 				.attr("stroke-dashoffset", 0)
 			.transition()
+				.delay(txn_lifetime)
 				.duration(arc_length*txn_duration_out)
 				.attr("stroke-dashoffset", -arc_length);
 
@@ -796,6 +787,7 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 				.duration(arc_length*txn_duration_in)
 				.attr("stroke-dashoffset", 0)
 			.transition()
+				.delay(txn_lifetime)
 				.duration(arc_length*txn_duration_out)
 				.attr("stroke-dashoffset", -shadow_length)
 
@@ -816,7 +808,7 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
     		.transition()
 				.attr("r", function(d) { return 10; })
 				.attr("opacity", 0.5)
-				.duration((txn_duration_in + txn_duration_out) * arc_length)
+				.duration((txn_duration_in + txn_duration_out) * arc_length + txn_lifetime)
 				.each("end", function() { this.parentNode.remove(); }); 
     }
 
