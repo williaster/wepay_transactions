@@ -1,11 +1,14 @@
+/*
+ * Transaction vis counter module. 
+ * @author chris c williams
+ * @date   2014-12
+ *
+ */
 d3.wepay = d3.wepay || {}; // declare namespace if it doesn't exist 
-
-
-
 d3.wepay.counter = function counterLabel(startCt) {
-
 	d3.wepay._txnCt = startCt ? startCt : 0;
 	
+	// Private variables ------------------------------------------------------
 	var margin = { top: 0, right: 0, bottom: 0, left: 0,
 				   labelLeft: 0, labelTop: 25 },
 		width  = 300,

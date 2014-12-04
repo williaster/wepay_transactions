@@ -1,8 +1,15 @@
+/*
+ * Transaction vis map module. 
+ * @author chris c williams
+ * @date   2014-12
+ *
+ * 
+ */
 d3.wepay = d3.wepay || {}; // declare namespace if it doesn't exist 
 
 d3.wepay.map = function mapChart() {
 	
-	// Private variables
+	// Private variables ------------------------------------------------------
 	var margin	 		  = { top: 0, right: 0, bottom: 0, left: 0 },
 		width 			  = 1200,
 		height 		 	  = 650,
@@ -13,7 +20,7 @@ d3.wepay.map = function mapChart() {
 		sky_to_land_ratio = 1.4, 	// how 'high' the sky shell is
 		txnDurationIn     = 2, 	 	// multiplier for duration of arc creation 
 		txnDurationOut    = 1,	 	// multiplier for duration of arc removal
-		txnLifetime       = 800,   	// how long arc is visible, in ms
+		txnLifetime       = 600,   	// how long arc is visible, in ms
 		txnHeadStartR     = 3,		// start radius of the arc head
 		txnHeadEndR       = 10, 	// end   radius of the arc head
 		mapSvg, projection, sky, landPath, skyPath, arcStrokeWidth, arcColor;
@@ -89,7 +96,17 @@ d3.wepay.map = function mapChart() {
 			});
 
 			// Add svg style defs for arc head
+			if (!d3.select(this).select("defs")[0][0]) {
+				d3.select(this).append("defs");
+			}
 
+			d3.select(this).select("defs").append("filter") // this is for transaction arc-head blur
+				.attr("id", "blur")
+				// make filter canvas bigger, else blur becomes square
+				.attr("x", "-150%").attr("y", "-150%") 
+				.attr("width", "300%").attr("height", "300%")
+				.append("feGaussianBlur")
+				.attr("stdDeviation", 3);
 
     	});
     }
@@ -173,14 +190,20 @@ d3.wepay.map = function mapChart() {
  	 * ( see http://bit.ly/1GQ6AhU )
 	 */
 	function recursiveTxnCallback() {
+		console.log("_txnIdx " + d3.wepay._txnIdx)
+		console.log("_txnGs.size()" + d3.wepay._txnGs.size())
+
 		// Base case: no more transactions, so will update data
 		if (d3.wepay._txnIdx >= d3.wepay._txnGs.size()) { 
+			console.log("update data trigger")
+			
 			return function() { 
 				d3.wepay.util.updateData( d3.wepay._dataFile );
 				return true; 
 			};
 		} else if (d3.wepay._txnIdx == d3.wepay._txnGs.size() - 1) { // last transaction
-			return txnCallbackFactory(d3.wepay._maxPauseMS); 
+			// The txn lifetime determines how long the final animation takes
+			return txnCallbackFactory(500 + d3.wepay._map.txnLifetime()); 
 
 		} else { // Compute next interval based on real time between curr and next txns
 			var currTxnData = d3.wepay._txnGs[0][d3.wepay._txnIdx].__data__,
@@ -263,51 +286,51 @@ d3.wepay.map = function mapChart() {
 	 */
 	function animateTransaction(arc, arcShadow, arcHead) {
 
-		var arc_length    = arc.node().getTotalLength(),
-			shadow_length = arcShadow.node().getTotalLength();
+		var arcLength    = arc.node().getTotalLength(),
+			shadowLength = arcShadow.node().getTotalLength();
 
 		arc
-			.attr("stroke-dasharray",  arc_length + " " + arc_length)
-			.attr("stroke-dashoffset", arc_length)
+			.attr("stroke-dasharray",  arcLength + " " + arcLength)
+			.attr("stroke-dashoffset", arcLength)
 			.style("display", "")
 			.transition()
-				.duration(arc_length*txnDurationIn)
+				.duration(arcLength*txnDurationIn)
 				.attr("stroke-dashoffset", 0)
 			.transition()
 				.delay(txnLifetime)
-				.duration(arc_length*txnDurationOut)
-				.attr("stroke-dashoffset", -arc_length);
+				.duration(arcLength*txnDurationOut)
+				.attr("stroke-dashoffset", -arcLength);
 
 		arcShadow
-			.attr("stroke-dasharray",  shadow_length + " " + shadow_length)
-			.attr("stroke-dashoffset", shadow_length)
+			.attr("stroke-dasharray",  shadowLength + " " + shadowLength)
+			.attr("stroke-dashoffset", shadowLength)
 			.style("display", "")
 			.transition()
-				.duration(arc_length*txnDurationIn)
+				.duration(arcLength*txnDurationIn)
 				.attr("stroke-dashoffset", 0)
 			.transition()
 				.delay(txnLifetime)
-				.duration(arc_length*txnDurationOut)
-				.attr("stroke-dashoffset", -shadow_length)
+				.duration(arcLength*txnDurationOut)
+				.attr("stroke-dashoffset", -shadowLength)
 
 		arcHead
 		    .transition()
-	        	.duration(arc_length*txnDurationIn)
+	        	.duration(arcLength*txnDurationIn)
 	        	.attrTween('cx', function (d, i, a) {
 			        return function (t) {
-			          	return arc.node().getPointAtLength(t * arc_length).x;
+			          	return arc.node().getPointAtLength(t * arcLength).x;
 			    	};
     			})
     			.attrTween('cy', function (d, i, a) {
 			        return function (t) {
-			          	return arc.node().getPointAtLength(t * arc_length).y;
+			          	return arc.node().getPointAtLength(t * arcLength).y;
 			    	};
     			})
     		.attr("r", function(d) { return txnHeadStartR; }) 
     		.transition()
 				.attr("r", function(d) { return txnHeadEndR; })
 				.attr("opacity", 0.5)
-				.duration((txnDurationIn + txnDurationOut) * arc_length + txnLifetime)
+				.duration(txnLifetime)
 				.each("end", function() { this.parentNode.remove(); }); 
     }
 

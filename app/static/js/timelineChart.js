@@ -1,5 +1,11 @@
+/*
+ * Transaction vis timeline module. 
+ * @author chris c williams
+ * @date   2014-12
+ *
+ *  
+ */
 d3.wepay = d3.wepay || {}; // declare namespace if it doesn't exist 
-
 d3.wepay.timeline = function timelineChart() {
 
 	// Private variables ------------------------------------------------------
@@ -114,6 +120,8 @@ d3.wepay.timeline = function timelineChart() {
 	 * If this condition is not met bin.curr_y is set to = 0;
 	 */
 	timeline.resetTimelineCts = function(fillToIdx) {
+		console.log("resetTimelineCts fillToIdx " + fillToIdx);
+
 		for (var i=0; i < d3.wepay._timelineCts.length; i++) {
 			
 			var currTxnBin = d3.wepay._timelineCts[i],
@@ -275,7 +283,7 @@ d3.wepay.timeline = function timelineChart() {
 												barBin.curr_y + " trasactions";
 
 			addBarCtLabel(timelineHist, barBin, barIdx);
-			console.log("check ct label update");
+
 			// // is this necessary?
 			// var start = label.attr("transform");
 			// label.select("text")

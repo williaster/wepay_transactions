@@ -1,3 +1,10 @@
+/*
+ * Transaction vis utility module. 
+ * @author chris c williams
+ * @date   2014-12
+ *
+ */
+
 d3.wepay = d3.wepay || {}; 	// declare namespace if it doesn't exist 
 d3.wepay.util = {}; 		// util functions here
 
@@ -23,7 +30,8 @@ d3.wepay.util.getData = function(dataFile, callback) {
 d3.wepay.util.updateData = function(prevDatafile) {
 	if (d3.wepay._loop) { // just loop
 		d3.wepay.util.updateTxnData(d3.wepay._txns); 
-	
+		d3.wepay._map.start();
+		
 	} else { // otherwise request new data file and fetch new data
 		var url = d3.wepay._callbackDomain + "/update_data?prev_datafile=" + prevDatafile;
 
@@ -33,10 +41,9 @@ d3.wepay.util.updateData = function(prevDatafile) {
 				return console.log(error);
 			}
 			d3.wepay._dataFile = resp.response;
-			d3.wepay.util.getData( resp.response );
+			d3.wepay.util.getData( resp.response, d3.wepay._map.start );
 		});
 	}
-	//d3.wepay._map.start();
 }
 
 /*
@@ -60,10 +67,10 @@ d3.wepay.util.parseTxns = function(txns) {
  */
 d3.wepay.util.updateTxnData = function(newTxns) {
 
-	var oldTxns    = d3.wepay._txns.length ? d3.wepay._txns.slice() : undefined,
+	var oldTxns    = d3.wepay._txns.length ? d3.wepay._txns : undefined,
 		nNewTxns   = newTxns.length,
 		nOldTxns   = oldTxns ? 
-				    (oldTxns.totalTxns ? oldTxns.totalTxns : oldTxns.length) : 0,
+				    (oldTxns ? oldTxns.totalTxns : oldTxns.length) : 0,
 		minNewTxns = newTxns[0].time.getTime(),
 		maxNewTxns = newTxns[newTxns.length-1].time.getTime(),
 		minOldTxns = oldTxns ? oldTxns[0].time.getTime() : undefined,
@@ -94,18 +101,14 @@ d3.wepay.util.updateTxnData = function(newTxns) {
 		// are displayed in the histogram; we then update transactions to include
 		// only the new transactions because the old histogram counts will be filled
 		// and we want arcs to feed from only the new point in time/new values
+
 		var fillToIdx = 0;
 		if (d3.wepay._timeline) {
 			d3.wepay._txns = concatTxns;
 			d3.wepay._timeline.updateTimelineCts(1000); // param = ms duration of change
 
 			fillToIdx = d3.wepay._timeline.getFillToIdx(oldTxns);
-			
-			console.log("test that appended data does not need init timeline. resets below")
-			//d3.wepay._timeline.initTimeline()
-
-			// TODO: make sure this works when re-assigning the old/new/_txns
-			console.log("checking correct fillToIdx: " + fillToIdx);
+			d3.wepay._timeline.initTimeline()
 		}
 
 		d3.wepay._txns = newTxns; 
@@ -127,7 +130,7 @@ d3.wepay.util.initVisualization = function(txns) {
  	d3.wepay._txnIdx  = 0;
 
 	if (d3.wepay._timeline) {
-		d3.wepay._timeline.updateTimelineCts(1000); 
+		d3.wepay._timeline.updateTimelineCts(500); 
 		d3.wepay._timeline.initTimeline();
 	}
 	d3.wepay._map.buildTxnGroups(txns);

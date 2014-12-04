@@ -17,7 +17,9 @@ function makeVisualization(dataFile, loop, maxpauseMS, callbackDomain) {
 	d3.wepay._timelineCts 	  = [],
 	d3.wepay._txns        	  = [],
 	d3.wepay._timeIdx     	  = 0,
-	d3.wepay._txnIdx      	  = 0;
+	d3.wepay._txnIdx      	  = 0,
+	d3.wepay._speedDomain     = [1,1000],
+	d3.wepay._txnLifetimeDomain = [400, 5000];
 
 	var visWidth   = 1200,
 		visHeight  = 650;
@@ -38,12 +40,23 @@ function makeVisualization(dataFile, loop, maxpauseMS, callbackDomain) {
 		counterWidth  = 300,
 		counterHeight = 300;
 
+	var slidersMargin = { top: counterMargin.top + 20, right: 320, bottom: 15, left: 0, 
+						  labelSpace: 15, speedMargin: 11 },
+		slidersWidth  = 500,
+		slidersHeight = 500;
 
 	// Create vis svg, vis components are added to this selection
 	var vis = d3.select("#vis").append("svg")
 		.attr("class", "vis")
 		.attr("width",  visWidth)
 		.attr("height", visHeight);
+
+	var sliderContainer = vis.append("svg")
+		.attr("class", "slider-container")
+		.attr("width",  slidersWidth)
+		.attr("height", slidersHeight)
+	  .append("g")
+	  	.attr("transform", "translate(" + slidersMargin.left + "," + slidersMargin.top + ")");
 
 	// Create and initialize visualziation components
 	d3.wepay._map = d3.wepay.map()
@@ -62,16 +75,32 @@ function makeVisualization(dataFile, loop, maxpauseMS, callbackDomain) {
 		.height(counterHeight)
 		.margin(counterMargin);
 
-	var sliderContainer = vis.
-	d3.wepay._sliders =
+	// Sliders
+	d3.wepay._speedSlider = d3.wepay.slider()
+		.domain(d3.wepay._speedDomain)
+		.initVal(d3.wepay._speedMultiplier)
+		.updateVal(function(newVal) { d3.wepay._speedMultiplier = newVal; })
+		.getLabelVal(function(newVal) { return d3.wepay.util.numWithCommas(Math.floor(newVal)) + "x"; })
+		.labelText("real time")
+		.class("speed-slider")
+		.scale(d3.scale.log());
 
-	vis.call(d3.wepay._map);  		// create map
-	vis.call(d3.wepay._timeline);   // create timeline
-	vis.call(d3.wepay._counter);
+	d3.wepay._lifetimeSlider = d3.wepay.slider()
+		.margin( { top: 50, right: 0, bottom: 0, left: 25, labelSpace: 11, speedMargin: 11 })
+		.domain(d3.wepay._txnLifetimeDomain)
+		.initVal(d3.wepay._map.txnLifetime())
+		.updateVal(d3.wepay._map.txnLifetime)
+		.labelText("lifetime")
+		.class("lifetime-slider")
+		.scale(d3.scale.log());
+
+	vis.call(d3.wepay._map);
+	vis.call(d3.wepay._timeline);   
+	vis.call(d3.wepay._counter); 	
+	sliderContainer.call(d3.wepay._speedSlider);
+	sliderContainer.call(d3.wepay._lifetimeSlider);
 
 	queue()
 		.defer(d3.wepay.util.getData, dataFile)
-		.await( d3.wepay._map.start );
-
-	// can hook be used for when map is loaded to proceed to data loading?
+		.await(d3.wepay._map.start);
 }

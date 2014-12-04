@@ -428,8 +428,6 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 
 	}
 
-	function concat_txns() {};
-
 	/*
 	 * Returns the maximum idx of timeline_counts bin that contains one or more txns 
 	 * from old_txns (bins up to this value will be filled by another value)
