@@ -86,6 +86,23 @@ def wepay(methods=["GET"]):
                            loopbool_as_str=loop, maxpause_ms=maxpause_ms, 
                            callback_domain=CALLBACK_DOMAIN)
 
+@app.route('/wepay_about')
+def about(methods=["GET"]):
+    """View for mockup of wepay.com About page
+    """ 
+    title        = "About WePay"
+    
+    # encode some default file (yesterday, random, etc.)
+    data_relpath = "%s/%s" % (REL_DATA_DIR, "100_txns_latlong.json") 
+    # set an initial starting transaction count
+    counter_start = 29975;
+
+    maxpause_ms  = int(request.args.get("maxpause")) if request.args.get("maxpause") else 1500 
+
+    return render_template("wepay_about.html", title=title, datafile=data_relpath, 
+                           counter_start=counter_start, maxpause_ms=maxpause_ms)
+
+
 @app.route('/update_data')
 def update_data(methods=["GET"]):
     """Handles requests for more data. Expects a lastfile parameter which

@@ -6,6 +6,7 @@
  */
 d3.wepay = d3.wepay || {}; // declare namespace if it doesn't exist 
 d3.wepay.counter = function counterLabel(startCt) {
+	
 	d3.wepay._txnCt = startCt ? startCt : 0;
 	
 	// Private variables ------------------------------------------------------
@@ -80,3 +81,37 @@ d3.wepay.counter = function counterLabel(startCt) {
 
 	return counter;
 }
+
+/*
+ * Simpler counter, that sets the text property of the passed selection
+ * to the running transaction count. 
+ */
+d3.wepay.minCounter = function minCounter(startCt) {
+	
+	d3.wepay._txnCt = startCt ? startCt : 0;
+	var selection;
+
+	function counter(_selection) { 
+		_selection.each(function() {
+			selection = this;
+			counter.updateCounter(d3.wepay._txnCt)
+		});
+	}
+
+	// Sets the count value of the counter to the specified count
+	counter.count = function(count) {
+		if (!arguments.length) return d3.wepay._txnCt;
+		d3.wepay._txnCt = count;
+		console.log(".count / _txnCt = " + count);
+		return this;
+	}
+
+	// Updates the selection text to the new count value
+	counter.updateCounter = function(newCt) {
+		d3.select(selection).html( d3.wepay.util.numWithCommas(newCt) );
+	}
+
+	return counter;
+}
+
+

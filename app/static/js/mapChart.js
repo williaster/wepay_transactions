@@ -190,13 +190,10 @@ d3.wepay.map = function mapChart() {
  	 * ( see http://bit.ly/1GQ6AhU )
 	 */
 	function recursiveTxnCallback() {
-		console.log("_txnIdx " + d3.wepay._txnIdx)
-		console.log("_txnGs.size()" + d3.wepay._txnGs.size())
-
 		// Base case: no more transactions, so will update data
 		if (d3.wepay._txnIdx >= d3.wepay._txnGs.size()) { 
 			console.log("update data trigger")
-			
+
 			return function() { 
 				d3.wepay.util.updateData( d3.wepay._dataFile );
 				return true; 
