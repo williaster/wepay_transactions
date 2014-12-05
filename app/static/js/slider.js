@@ -3,8 +3,9 @@
  * @author chris c williams
  * @date   2014-12
  *
- * Adds a slider chart function to the d3.wepay namespace that 
- * returns a callable function which creates 
+ * Adds a slider chart function/module to the d3.wepay namespace. The returned
+ * closure is both an object and a function, i.e. in the d3 reusable chart 
+ * pattern
  */
 
 d3.wepay = d3.wepay || {}; // declare namespace if it doesn't exist 
@@ -13,12 +14,12 @@ d3.wepay.slider = function() {
 	var margin	 		  = { top: 0, right: 0, bottom: 0, left: 25, labelSpace: 15, speedMargin: 11 },
 		width 			  = 150,
 		height 		 	  = 75,
-		domain            = [1,100],
-		initVal           = 1,
+		domain            = [1,100], 			// default range of values for slider to take
+		initVal           = 0,       			// default initial value of slider
 		labelLabelText    = "",
-		sliderClass 	  = "slider",
-		handleRadius      = 6,
-		scaleObj          = d3.scale.linear(),
+		sliderClass 	  = "slider-g",
+		handleRadius      = 6,      		  	// radius of slider handle circle
+		scaleObj          = d3.scale.linear(), 	// linear scale by default
 		sliderWidth, sliderHeight, slide, sliderHandle, sliderScale, sliderAxis, labelVal, labelLabel, brush;
 
 	var dispatch = d3.dispatch("updateVal", "getLabelVal");
@@ -43,13 +44,13 @@ d3.wepay.slider = function() {
 				.on("brush", update);
 
 			sliderAxis = container.append("g")
-				.attr("class", "speed-axis")
+				.attr("class", "slider-axis")
 				.attr("transform", "translate(0," + sliderHeight / 2 + ")")
 		      .call( d3.svg.axis().scale(sliderScale).tickSize(0) )
 		    	.selectAll(".tick").remove(); // call after axis is made
 
 			slide = container.append("g")
-				.attr("class", "speed-slider") // todo need to update classes
+				.attr("class", "slider") // todo need to update classes
 				.call(brush);
 
 			// d3 brushes typically support extent and re-sizing, not used when

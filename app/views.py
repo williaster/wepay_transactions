@@ -17,10 +17,11 @@ import os
 
 DATA_DIR        = "%s/static/data/txns" % os.path.dirname( os.path.realpath(__file__) )
 REL_DATA_DIR    = "../static/data/txns"
-CALLBACK_DOMAIN = "http://127.0.0.1:5000"
+CALLBACK_DOMAIN = "http://127.0.0.1:5000/update_data"
 
 #..............................................................................
 # Helper functions for views
+
 def get_datafile(data_id):
     """Attempts to locate a file in the global DATA_DIR directory based on the
        data_id param. First trys to find a .json file matching the name. If it
@@ -66,7 +67,7 @@ def get_mostrecent_file(directory, pattern):
 #..............................................................................
 # Views
 @app.route('/')
-@app.route('/wepay')
+@app.route('/timeline')
 def wepay(methods=["GET"]):
     """Base view that serves the WePay HTML page. Handles a GET request and
        expects a reques 'id' parameter which serves as an identifier for the
@@ -82,30 +83,45 @@ def wepay(methods=["GET"]):
     data_id      = request.args.get("id")
     data_relpath = get_datafile(data_id)
 
-    return render_template("wepay.html", title=title, datafile=data_relpath,
+    return render_template("timeline.html", title=title, datafile=data_relpath,
                            loopbool_as_str=loop, maxpause_ms=maxpause_ms, 
                            callback_domain=CALLBACK_DOMAIN)
 
-@app.route('/wepay_about')
+@app.route('/about')
 def about(methods=["GET"]):
-    """View for mockup of wepay.com About page
+    """View for mockup of wepay.com About page. Similar to the lobby page 
+       but does NOT include a counter
     """ 
-    title        = "About WePay"
+    title = "WePay: about"
     
     # encode some default file (yesterday, random, etc.)
-    data_relpath = "%s/%s" % (REL_DATA_DIR, "100_txns_latlong.json") 
+    data_relpath = "%s/%s" % (REL_DATA_DIR, "1000_txns_latlong.json") 
     # set an initial starting transaction count
     counter_start = 29975;
-
+    # maximum pause time between transactions
     maxpause_ms  = int(request.args.get("maxpause")) if request.args.get("maxpause") else 1500 
 
-    return render_template("wepay_about.html", title=title, datafile=data_relpath, 
+    return render_template("about.html", title=title, datafile=data_relpath, 
                            counter_start=counter_start, maxpause_ms=maxpause_ms)
+@app.route('/lobby')
+def lobby(methods=["GET"]):
+    """View for mockup lobby display page
+    """ 
+    title = "WePay Transactions"
 
+    # encode some default file (yesterday, random, etc.)
+    data_relpath = "%s/%s" % (REL_DATA_DIR, "1000_txns_latlong.json") 
+    # initial starting transaction count parameter
+    counter_start = int(request.args.get("ct")) if request.args.get("ct") else 0;
+    # maximum pause time between transactions
+    maxpause_ms  = int(request.args.get("maxpause")) if request.args.get("maxpause") else 1500 
+
+    return render_template("lobby.html", title=title, datafile=data_relpath, 
+                           counter_start=counter_start, maxpause_ms=maxpause_ms)
 
 @app.route('/update_data')
 def update_data(methods=["GET"]):
-    """Handles requests for more data. Expects a lastfile parameter which
+    """Handles requests for more data. Expects a prev_datafile parameter which
        enables the handler to find a more recent file if it exists in the
        directory, or to return the same file again for looping.
     """
@@ -117,25 +133,3 @@ def update_data(methods=["GET"]):
         new_relpath = "%s/%s" % (REL_DATA_DIR, mostrecent_file)
 
     return new_relpath
-
-
-@app.route('/wepay_refactor')
-def wepay_refactor(methods=["GET"]):
-    """Base view that serves the WePay HTML page. Handles a GET request and
-       expects a reques 'id' parameter which serves as an identifier for the
-       data to be loaded and served with the page. 
-
-       Subsequent requests for data (e.g., in the form of XHR/AJAX requests)
-       are expected to be made to the /get_data view.
-    """ 
-    title    = "WePay transaction visualization"
-
-    loop         = request.args.get("loop") if request.args.get("loop") else "true"
-    maxpause_ms  = int(request.args.get("maxpause")) if request.args.get("maxpause") else 1500 
-    data_id      = request.args.get("id")
-    data_relpath = get_datafile(data_id)
-
-    return render_template("wepay_refactor.html", title=title, datafile=data_relpath,
-                           loopbool_as_str=loop, maxpause_ms=maxpause_ms, 
-                           callback_domain=CALLBACK_DOMAIN)
-

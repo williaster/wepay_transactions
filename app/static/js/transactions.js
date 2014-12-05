@@ -65,12 +65,6 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 		counterWidth  = 300 - counterMargin.left - counterMargin.right,
 		counterHeight = 300 - counterMargin.top  - counterMargin.bottom;
 
-
-	console.log(counterMargin)
-	console.log(counterWidth)
-	console.log(counterHeight)
-
-
 	// The actual svg components, these handles are added to below
 	var vis = d3.select("#vis").append("svg")
 		.attr("class", "vis")
@@ -100,7 +94,7 @@ function make_vis(datafile, loop, maxpause_ms, callback_domain) {
 	var pay = logo.append("tspan")
 		.attr("class", "green")
 		.text("pay")
-		.attr("transform", "translate(" + (+we[0][0].offsetWidth + logo_margin.we_pay_margin) + ",0)");
+		//.attr("transform", "translate(" + (+we[0][0].offsetWidth + logo_margin.we_pay_margin) + ",0)");
 
 	// Transaction counter
 	var txn_counter = vis.append("svg")

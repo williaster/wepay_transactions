@@ -3,12 +3,48 @@
  * @author chris c williams
  * @date   2014-12
  *
+ * The map module is the core of the transaction visualization and therefore,
+ * in addition to creating the transaction map chart, it acts as a 
+ * visualization controller if additional components (e.g., counters) are added.
+ * In order to preserve the true timing betwween transactions (from data), 
+ * this works through recursive callbacks with the d3.timer(). The
+ * current transaction group is pulled based on a d3.wepay._txnIdx variable,
+ * initializes its own animiation, and calls a d3.timer() that pauses for an
+ * interval that reflects the true time (or a scaling factor based on 
+ * d3.wepay._speedMultiplier) between the calling transaction and the next. 
+ *
+ * Following the d3 reusable chart pattern (http://bost.ocks.org/mike/chart/),
+ * the following adds a map chart to the d3.wepay namespace as d3.wepay.map()
+ * The return value is a chart object (closure) with instance methods to modify
+ * size, margin, and variables for the chart. After initiailzing the chart,
+ * you must call the return value of .map() on a selection, which actually
+ * constructs the chart within the calliing selection (see reusable chart pattern).
+ * 
+ * Available getter/setter methods (supports method chaining):
+ * 		.map().txnDurationIn([multiplier])
+ * 		.map().txnDurationOut([multiplier])
+ * 		.map().txnLifetime([ms])
+ * 		.map().width([width])
+ * 		.map().height([height])
+ * 		.map().margin([margin])
+ *	
+ * 		
+ * Available public methods (do not support method chaining):
+ * 		.map().select()
+ * 		.map().buildTxnGroups(txns)
+ * 		.map().start()
+ *
+ * nb: 	In order to support looping without approaching infinite memory, 
+ * 		transactions remove themselves from the DOM after animation.
  * 
  */
 d3.wepay = d3.wepay || {}; // declare namespace if it doesn't exist 
-
 d3.wepay.map = function mapChart() {
 	
+	// Private variables for wepay namespace
+	d3.wepay._txns   = [],
+	d3.wepay._txnIdx = 0;
+
 	// Private variables ------------------------------------------------------
 	var margin	 		  = { top: 0, right: 0, bottom: 0, left: 0 },
 		width 			  = 1200,
@@ -17,12 +53,12 @@ d3.wepay.map = function mapChart() {
 		mapScale          = (470/1200)*(width  - margin.left - margin.right),
 		scale_to_w_ratio  = mapScale / (width  - margin.left - margin.right),
 		mapFile 		  = "../static/data/maps/countries2.topo.json", // world map data
-		sky_to_land_ratio = 1.4, 	// how 'high' the sky shell is
+		sky_to_land_ratio = 1.35, 	// how 'high' the sky shell is
 		txnDurationIn     = 2, 	 	// multiplier for duration of arc creation 
 		txnDurationOut    = 1,	 	// multiplier for duration of arc removal
 		txnLifetime       = 600,   	// how long arc is visible, in ms
 		txnHeadStartR     = 3,		// start radius of the arc head
-		txnHeadEndR       = 10, 	// end   radius of the arc head
+		txnHeadEndR       = 5, 		// end   radius of the arc head
 		mapSvg, projection, sky, landPath, skyPath, arcStrokeWidth, arcColor;
 	
 	// Chart closure, this is the return value of the module
@@ -61,7 +97,7 @@ d3.wepay.map = function mapChart() {
 				.domain([0,1000])
 				.clamp(true); // no massive lines for txn amts outside the domain
 
-			arcColor = d3.scale.category10();
+			arcColor = d3.wepay.util.colorMaker(); //scale.category10();
 
 			// Create map svg handle
 			mapSvg = d3.select(this).append("svg")
@@ -96,8 +132,8 @@ d3.wepay.map = function mapChart() {
 			});
 
 			// Add svg style defs for arc head
-			if (!d3.select(this).select("defs")[0][0]) {
-				d3.select(this).append("defs");
+			if (!d3.select(this).select("defs")[0][0]) { 
+				d3.select(this).append("defs"); // lazy loading
 			}
 
 			d3.select(this).select("defs").append("filter") // this is for transaction arc-head blur
@@ -107,7 +143,6 @@ d3.wepay.map = function mapChart() {
 				.attr("width", "300%").attr("height", "300%")
 				.append("feGaussianBlur")
 				.attr("stdDeviation", 3);
-
     	});
     }
 
@@ -116,9 +151,8 @@ d3.wepay.map = function mapChart() {
     /* 
      * Accessor for a handle to the map svg
      */
-    map.select = function() {
-    	return mapSvg;
-    }
+    map.select = function() { return mapSvg; }
+
 	/*
 	 * Creates txn groups with the passed txn data
 	 */
@@ -192,8 +226,6 @@ d3.wepay.map = function mapChart() {
 	function recursiveTxnCallback() {
 		// Base case: no more transactions, so will update data
 		if (d3.wepay._txnIdx >= d3.wepay._txnGs.size()) { 
-			console.log("update data trigger")
-
 			return function() { 
 				d3.wepay.util.updateData( d3.wepay._dataFile );
 				return true; 
@@ -245,7 +277,7 @@ d3.wepay.map = function mapChart() {
 	 * then animates them based on arc length
 	 */
 	function showTransaction(txnG) {
-		var txnColor = arcColor(d3.wepay._txnIdx % 10);
+		var txnColor = arcColor(d3.wepay._txnIdx);
 
 		// before animation, initialize arc, arc shadow, and arc head
 		var arc = d3.select(txnG).append("path")

@@ -3,10 +3,28 @@
  * @author chris c williams
  * @date   2014-12
  *
+ * Utility functions added to the d3.wepay.util namespace. This module includes
+ * functions that manage getting / updating data, and controller-like tasks for
+ * the visualization. It should be included in all transaction visualizations.
  */
 
 d3.wepay = d3.wepay || {}; 	// declare namespace if it doesn't exist 
-d3.wepay.util = {}; 		// util functions here
+d3.wepay.util = {}; 		// util methods here
+
+/*
+ * Returns a colorMaker function used for arc colors. The returned function
+ * behaves exactly like a d3.scale.color() scale: it takes as input an index
+ * and returns a color which corresponds to that index. If the index exceeds
+ * the valid range of colors, colors are recycled. 
+ *
+ * Simply redefine the colors array to determine the possible color outputs
+ */
+d3.wepay.util.colorMaker = function() {
+	var colors = ["#3182bd","#6baed6","#9ecae1",  	// blues 
+				  "#31a354","#74c476","#a1d99b", 	// greens
+				  "#636363","#969696"] 				// greys;
+	return d3.scale.ordinal().range(colors.sort()); // sort to randomize order
+}
 
 /*
  * Requests new data, parses it, and calls update_transaction_data
@@ -31,9 +49,9 @@ d3.wepay.util.updateData = function(prevDatafile) {
 	if (d3.wepay._loop) { // just loop
 		d3.wepay.util.updateTxnData(d3.wepay._txns); 
 		d3.wepay._map.start();
-		
+
 	} else { // otherwise request new data file and fetch new data
-		var url = d3.wepay._callbackDomain + "/update_data?prev_datafile=" + prevDatafile;
+		var url = d3.wepay._callbackDomain + "?prev_datafile=" + prevDatafile;
 
 		d3.xhr(url, function(error, resp) {
 			if (error) { 
@@ -122,7 +140,10 @@ d3.wepay.util.updateTxnData = function(newTxns) {
 }
 
 /*
- *
+ * Initializes the visualization by updating the _txns array to the passed
+ * txns array, resetting the time and txn indices, updating the timeline
+ * if one exists in the namespace, and building txn groups which are DOM
+ * elements with associated txn data.
  */
 d3.wepay.util.initVisualization = function(txns) {
 	d3.wepay._txns 	  = txns,
@@ -140,7 +161,7 @@ d3.wepay.util.initVisualization = function(txns) {
  * Resets the visualization for another round of txn visualizations.
  * Clears the timeline if it exists, builds new txn groups for the map, and
  * resets the internal visualization indices. Assumes the _txns variable 
- * is already updated.
+ * is already updated (ie current for next visuaization round).
  */
 d3.wepay.util.resetVisualization = function(fillToIdx) {
 	if (d3.wepay._timeline) {
@@ -154,11 +175,12 @@ d3.wepay.util.resetVisualization = function(fillToIdx) {
 }
 
 /*
- * Clears the visualization by setting clearing the private _txns and 
- * _timelineCts arrays, then resetting the timeline, if it exists
+ * Clears the visualization by clearing the private _txns and 
+ * _timelineCts arrays, then resetting the timeline, if it exists.
+ * This effectively removes all data from the visualization and is typically
+ * called only in the case of an error.
  */
 d3.wepay.util.clearVisualization = function() {
-	// console.log("clearing vis");
 	d3.wepay._txns 		  = [],
 	d3.wepay._timelineCts = [];
 	
@@ -166,7 +188,8 @@ d3.wepay.util.clearVisualization = function() {
 }
 
 /*
- * Adds commas to a number, better performance than n.toLocaleString();
+ * Adds commas to a number, better performance than n.toLocaleString(), 
+ * although is less intelligent.
  * source: http://stackoverflow.com/a/2901298
  */
 d3.wepay.util.numWithCommas = function(n) { 
