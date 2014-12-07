@@ -50,7 +50,7 @@ d3.wepay.map = function mapChart() {
 		width 			  = 1200,
 		height 		 	  = 650,
 		w_to_h_ratio	  = width / height,
-		mapScale          = (470/1200)*(width  - margin.left - margin.right),
+		mapScale          = (490/1200)*(width  - margin.left - margin.right),
 		scale_to_w_ratio  = mapScale / (width  - margin.left - margin.right),
 		mapFile 		  = "../static/data/maps/countries2.topo.json", // world map data
 		sky_to_land_ratio = 1.35, 	// how 'high' the sky shell is
@@ -59,7 +59,8 @@ d3.wepay.map = function mapChart() {
 		txnLifetime       = 600,   	// how long arc is visible, in ms
 		txnHeadStartR     = 3,		// start radius of the arc head
 		txnHeadEndR       = 5, 		// end   radius of the arc head
-		mapSvg, projection, sky, landPath, skyPath, arcStrokeWidth, arcColor;
+		arcStrokeWidth    = 2.3, 	// stroke-width of arc. reminent variable from mapping to amount
+		mapSvg, projection, sky, landPath, skyPath, arcColor;
 	
 	// Chart closure, this is the return value of the module
 	function map(_selection) {
@@ -67,19 +68,24 @@ d3.wepay.map = function mapChart() {
     		
     		var mapWidth   = width  - margin.left - margin.right,
 				mapHeight  = height - margin.top  - margin.bottom;
+			
+			// console.log(width + " x " + height);
+			// console.log(margin);	
+			// console.log(mapWidth + " x " + mapHeight);
+			// console.log(w_to_h_ratio);
 
 			// There are two projection levels / shells for 3D effect: land and sky
 			land = d3.geo.orthographic()
-			    .scale(mapScale) // TODO: this needs to scale/update with width/height
-			    .rotate([105,-10,0]) 					// center on USA
-			    .translate([mapWidth / 2, mapHeight + margin.top]) 	// upper hemisphere only
+			    .scale(mapScale) 
+			    .rotate([105,-10,0]) // center on USA
+			    .translate([mapWidth / 2, mapHeight*0.76 + margin.top]) // upper hemisphere only
 			    .clipAngle(90)
 			    .precision(.1);
 
 			sky = d3.geo.orthographic()
 			    .scale(sky_to_land_ratio * land.scale()) 
 			    .rotate([105,-10,0]) 
-			    .translate([mapWidth / 2, mapHeight + margin.top])
+			    .translate([mapWidth / 2, mapHeight*0.76 + margin.top])
 			    .clipAngle(90);
 
 			// Paths, lines, scales for drawing on the land and sky
@@ -92,12 +98,7 @@ d3.wepay.map = function mapChart() {
 				.interpolate("cardinal") // will use only 3 points, must smooth
 				.tension(0.0); 			 // 1 = straight/kinked lines
 
-			arcStrokeWidth = d3.scale.linear()
-				.range([1.5,8])
-				.domain([0,1000])
-				.clamp(true); // no massive lines for txn amts outside the domain
-
-			arcColor = d3.wepay.util.colorMaker(); //scale.category10();
+			arcColor = d3.wepay.util.colorMaker(); 
 
 			// Create map svg handle
 			mapSvg = d3.select(this).append("svg")
@@ -192,13 +193,13 @@ d3.wepay.map = function mapChart() {
     	mapScale = _w * scale_to_w_ratio;
     	return this;
     }
-	map.height = function(_h) {
-    	if (!arguments.length) return height;
-    	height   = _h,
-    	width    = _h * w_to_h_ratio, 
-    	mapScale = width * scale_to_w_ratio;
-    	return this;
-    }
+	// map.height = function(_h) {
+ //    	if (!arguments.length) return height;
+ //    	height   = _h,
+ //    	width    = _h * w_to_h_ratio, 
+ //    	mapScale = width * scale_to_w_ratio;
+ //    	return this;
+ //    }
     map.txnDurationIn = function(_in) {
     	if (!arguments.length) return txnDurationIn;
     	txnDurationIn = _in; 
@@ -283,13 +284,13 @@ d3.wepay.map = function mapChart() {
 		var arc = d3.select(txnG).append("path")
 			.attr("class", "transaction arc")
 			.attr("stroke", txnColor)
-			.attr("stroke-width", function(d) { return arcStrokeWidth( d.amount ); })
+			.attr("stroke-width", arcStrokeWidth)
 			.attr("d", function(d) { return skyPath( projectTransaction(d) ); })
 			.style("display", "none");
 
 		var arcShadow = d3.select(txnG).append("path")
 			.attr("class", "transaction shadow")
-			.attr("stroke-width", function(d) { return arcStrokeWidth( d.amount ); })
+			.attr("stroke-width", arcStrokeWidth)
 			.attr("d", landPath)
 			.style("display", "none");
 

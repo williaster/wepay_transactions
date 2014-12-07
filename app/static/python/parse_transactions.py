@@ -1,8 +1,46 @@
 #!/Users/christopherwilliams/dotfiles/virtualenvs/.virtualenvs/lighttable/bin/python
-info="""Module for parsing a Pandas DataFrame of transactions, or script for 
-		    reading a *.csv file of transactions from file, to map payer/payee zip 
-		    codes to longitude, latitude values which d3.js requires. Provides 
-		    methods for returning parsed data as JSON or writing to file.  
+info="""Module for parsing WePay transactions, or can be used as a script to 
+        do the same. Specific parsing steps include:
+          
+          - mapping payer/payee zip codes to longitude, latitude values 
+            (which d3.js requires). 
+          - annonymizing and minimizing data size for browser 
+          - Provides methods for returning parsed data as JSON or writing 
+            to file.  
+          **nb: Requires the pandas non-standard library.
+
+        To use as a script, see python parse_transactions.py --help
+        To use as module, use the csv_to_parsedjson(file_csv, outfile) function
+        
+        .......................................................................
+        # Input
+        When used as a script or module, an input .csv file of WePay data is
+        expected. The input .csv file MUST contain the variables:
+            capture_timestamp,                    (eg 1412122952, in SECONDS) 
+            payer_zip, payer_state, payer_country,(eg 30076,GA,US)
+            payee_zip, payee_state, payee_country (")
+
+            notes on input:
+              - Country variables are essential to correctly map zip codes to 
+                lat-long
+              - input does NOT need to be sorted
+              - correctly handles US zip codes without a leading zero
+              - correctly handles first 3 letters of CAN zip codes
+
+        .......................................................................
+        # Output
+        Output of pasing is json, as a file or as an object. The following
+        is example json output:
+            [ { "time":1412207786000, 
+                "to_coord":"[-77.0007,38.9832]",
+                "from_coord":"[-75.4894,42.312]" },
+              ... ]
+
+            notes on output:
+              - output is annonymized
+              - output json is sorted by time
+              - the coordinate arrays are [long, lat] NOT [lat, long].
+              - the coordinate arrays are of type str
      """
 
 __author__ = "christopher c williams"
@@ -11,6 +49,7 @@ __date__   = "2014-11"
 import pandas as pd
 import os
 
+# GLOBAL variables for location of zip to latlong lookup table
 PATH             = os.path.dirname( os.path.realpath(__file__) )
 F_ZIP_TO_LATLONG = "%s/../data/allcountries_zip_to_latlong.txt" % PATH
 
@@ -91,13 +130,11 @@ def clean_df(df):
        json fields the visualization expects.
 
        Expects df to contain the columns:
-       "capture_day", "capture_timestamp", "pr_id", "gross", "payee_coord", "payer_coord"
+       "capture_day", "capture_timestamp", "payee_coord", "payer_coord"
     """
-    df = df.ix[:,["capture_day", "capture_timestamp", "pr_id",
-                  "gross", "payee_coord", "payer_coord"]]
-    df.columns = \
-        ["date", "time", "app_id", "amount", "to_coord", "from_coord"]
+    df = df.ix[:,["capture_timestamp", "payee_coord", "payer_coord"]]
     
+    df.columns = ["time", "to_coord", "from_coord"] # rename for vis
     df.sort("time", inplace=True)
 
     return df
@@ -127,18 +164,15 @@ def parse_txns(df_txns, df_zip_to_latlong=None):
 
     return df
 
-def jsonify(df, action="return", outfile=None):
-	"""Converts the passed df to record-oriented json, and either writes the
+def jsonify(df, outfile=None):
+  """Converts the passed df to record-oriented json, and either writes the
 	   result to file (action = "write") or returns it (action = "return").
-	"""
-	if action == "return":
-		return df.to_json(orient="records")
-	elif action == "write" and outfile:
-		df.to_json(outfile, orient="records")
-		return
-	else:
-		raise Exception("Invalid action or unspecified outfile")
-
+  """
+  if outfile:
+    return df.to_json(outfile, orient="records")
+  else:
+    return df.to_json(orient="records")
+	
 def csv_to_parsedjson(file_csv, outfile=None):
   """Takes a csv filename as input, parses it, and either returns the data as
      json or writes json to the specified outfile (including path).
@@ -146,13 +180,12 @@ def csv_to_parsedjson(file_csv, outfile=None):
   df_unparsed  = pd.read_csv( file_csv )
   df_parsed    = parse_txns( df_unparsed )
 
-  if outfile:
-    jsonify(df_parsed, action="write", outfile=outfile)
-  else:
-    return jsonify(df, action="return", outfile=None)
+  return jsonify(df_parsed, outfile=outfile)
+
 
 #..............................................................................
-# Main, enables running this as a script
+# Main, enables running this as a script with parameters. See
+# python parse_transactions.py --help
 
 def main():
 	outfile = "%s_latlong.json" % args.out_base
@@ -165,6 +198,7 @@ def main():
 
 	print "Writing (%i/%i) parsed transactions to %s" % (filt_txns, unfilt_txns, outfile)
 	jsonify(df_parsed, action="write", outfile=outfile)
+
 
 if __name__ == "__main__":
 	

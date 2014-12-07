@@ -53,3 +53,47 @@
 
  	return logo;
  }
+
+ d3.wepay.label = function(text) {
+ 	var labelText = text ? text : "";
+
+ 	function label(_selection) {
+ 		_selection.each(function(_data) {
+
+ 			var labelG = d3.select(this).append("svg")
+				.attr("class", "label")
+				.attr("width",  width)
+				.attr("height", height)
+			  .append("g")
+			  	.attr("transform", "translate(" + margin.left + ", " + margin.top + ")")
+			  	.append("text")
+				.text(text);
+				
+ 		});
+ 	}
+
+ 	// Public getter/setter methods -------------------------------------------
+    // If setting a value, returns the chart for method chaining pattern.
+    label.margin = function(_m) {
+    	if (!arguments.length) return margin;
+    	margin = _m; 
+    	return this;
+    }
+    label.width = function(_w) {
+    	if (!arguments.length) return width;
+    	width = _w;
+    	return this;
+    }
+	label.height = function(_h) {
+    	if (!arguments.length) return height;
+    	height = _h;
+    	return this;
+    }
+    label.text = function(_t) {
+    	if (!arguments.length) return labelText;
+    	labelText = _t;
+    	return this;
+    }
+
+ 	return label;
+ }

@@ -3,6 +3,7 @@
  * @author chris c williams
  * @date   2014-12
  *
+ * This is a simple
  */
 d3.wepay = d3.wepay || {}; // declare namespace if it doesn't exist 
 d3.wepay.counter = function counterLabel(startCt) {
@@ -102,7 +103,6 @@ d3.wepay.minCounter = function minCounter(startCt) {
 	counter.count = function(count) {
 		if (!arguments.length) return d3.wepay._txnCt;
 		d3.wepay._txnCt = count;
-		console.log(".count / _txnCt = " + count);
 		return this;
 	}
 

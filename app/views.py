@@ -17,7 +17,9 @@ import os
 
 DATA_DIR        = "%s/static/data/txns" % os.path.dirname( os.path.realpath(__file__) )
 REL_DATA_DIR    = "../static/data/txns"
-CALLBACK_DOMAIN = "http://127.0.0.1:5000/update_data"
+CALLBACK_DOMAIN = "http://127.0.0.1:5000/update_data" # callback view for the d3 
+                                                      # visualization to request
+                                                      # the next data file
 
 #..............................................................................
 # Helper functions for views
@@ -67,8 +69,8 @@ def get_mostrecent_file(directory, pattern):
 #..............................................................................
 # Views
 @app.route('/')
-@app.route('/timeline')
-def wepay(methods=["GET"]):
+@app.route('/customer')
+def customer(methods=["GET"]):
     """Base view that serves the WePay HTML page. Handles a GET request and
        expects a reques 'id' parameter which serves as an identifier for the
        data to be loaded and served with the page. 
@@ -82,37 +84,39 @@ def wepay(methods=["GET"]):
     maxpause_ms  = int(request.args.get("maxpause")) if request.args.get("maxpause") else 1500 
     data_id      = request.args.get("id")
     data_relpath = get_datafile(data_id)
+    counter_start = int(request.args.get("ct")) if request.args.get("ct") else 0;   
 
-    return render_template("timeline.html", title=title, datafile=data_relpath,
+    return render_template("customer.html", title=title, datafile=data_relpath,
                            loopbool_as_str=loop, maxpause_ms=maxpause_ms, 
-                           callback_domain=CALLBACK_DOMAIN)
+                           callback_domain=CALLBACK_DOMAIN, 
+                           counter_start=counter_start)
 
 @app.route('/about')
 def about(methods=["GET"]):
     """View for mockup of wepay.com About page. Similar to the lobby page 
-       but does NOT include a counter
+       but does NOT include a counter element or variable.
     """ 
     title = "WePay: about"
     
     # encode some default file (yesterday, random, etc.)
-    data_relpath = "%s/%s" % (REL_DATA_DIR, "1000_txns_latlong.json") 
-    # set an initial starting transaction count
-    counter_start = 29975;
+    data_relpath = "%s/%s" % (REL_DATA_DIR, "sample-data_1k.json") 
     # maximum pause time between transactions
     maxpause_ms  = int(request.args.get("maxpause")) if request.args.get("maxpause") else 1500 
 
     return render_template("about.html", title=title, datafile=data_relpath, 
-                           counter_start=counter_start, maxpause_ms=maxpause_ms)
+                           maxpause_ms=maxpause_ms)
+
 @app.route('/lobby')
 def lobby(methods=["GET"]):
-    """View for mockup lobby display page
+    """View for mockup lobby display page. Differs from the about page view except 
+       that it includes a counter variable and DOM element.
     """ 
     title = "WePay Transactions"
 
     # encode some default file (yesterday, random, etc.)
-    data_relpath = "%s/%s" % (REL_DATA_DIR, "1000_txns_latlong.json") 
+    data_relpath = "%s/%s" % (REL_DATA_DIR, "sample-data_1k.json") 
     # initial starting transaction count parameter
-    counter_start = int(request.args.get("ct")) if request.args.get("ct") else 0;
+    counter_start = int(request.args.get("ct")) if request.args.get("ct") else 0;   
     # maximum pause time between transactions
     maxpause_ms  = int(request.args.get("maxpause")) if request.args.get("maxpause") else 1500 
 
@@ -121,9 +125,13 @@ def lobby(methods=["GET"]):
 
 @app.route('/update_data')
 def update_data(methods=["GET"]):
-    """Handles requests for more data. Expects a prev_datafile parameter which
-       enables the handler to find a more recent file if it exists in the
-       directory, or to return the same file again for looping.
+    """Handles requests for a new data file. Current implementation expects a 
+       prev_datafile parameter which enables this controller to find a more 
+       recent file if it exists in the directory, or to return the same 
+       file again for looping if it cannot.
+
+       The visualization will call this view if the loop parameter is not
+       set to true (true by default)
     """
     old_relpath     = new_relpath = request.args.get("prev_datafile")
     old_file        = os.path.split( old_relpath )[1] # remove path
