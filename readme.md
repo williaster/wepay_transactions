@@ -1,104 +1,110 @@
-WePay transaction data parsing and d3.js visualization web application. 
-For this project, data parsing and file parameters are handled by the back-end
-so that anonymized and compressed data can be sent to be rendered in the front-
-end
+##WePay transaction visualization 
+Transaction data parsing and d3.js / Flask web application. Current project encompasses transaction data parsing, several d3 modules for different visualization components, and three different views/pages designed for different use cases.
 
-@author chris williams, for WePay
-@date   2014-11
+#####@author chris williams, copyright WePay
+#####@date   2014-11
 
-===============================================================================
-Gross contents, see specific files for more detailed documentation about 
-components:
+##Contents 
+see specific files for more detailed documentation:
 
-	- run.py
-		Running run.py from the terminal will start the web app server 
+* **run.py**
+	Running run.py from the terminal will start the web app server 
 
-	- app/
-		Flask webapp with three different views/pages for different use-cases 
-		and functionality. Each view has 4 components
-			1. the Flask view which handles dataFiles, and optional data
-			   parsing
-			2. an .html page referencing
-			3. a XXXpage.js script specific for the XXX page, as well as any
-			   transaction visualization modules necessary for the specific
-			   page.
-			3. .css style sheets for the specific page
-	 
+* **app/**
+	Flask webapp with three different views/pages for different use-cases 
+	and therefore functionality. Each view has 4 components
+		1. the Flask view which handles dataFiles, and optional data
+		   parsing
+		2. an .html page which references Flask variables, sets up the DOM for 
+		   the visualization, and references to appropriate style sheets and java scripts.
+		3. a XXXpage.js script specific for the XXX page. Note: this expects other transaction modules
+		   to already be loaded, and **ALL** pages require d3.js, topojson.js, and queue.js (see dependencies)
+		3. .css style sheets for the specific page
 
+	**Pages/views**:
 
-		Pages/views increasing:
+		http://x.x.x.x:port/domain/about --> **about.html**
+			- The only visualization component of this view is the map,
+			  the header and footer are static content and could easily be 
+			  changed
+			- aboutpage.js requires a div#vis DOM element in the html page
+			  to populate with the transaction map. sizing can be set in
+			  aboutpage.js
+			- Currently this view passes a .json datafile parameter to the 
+			  front end, which then loops on the transactions in that file
+			  until exit
+			- map.css is included for the map styles, about-lobby.css is 
+			  included for the text styling, etc.
+			- mapChart.js, util.js 
 
-			http://x.x.x.x:port/domain/about --> about.html 
-				
-				- The only visualization component of this view is the map,
-				  header and footer are static content and could easily be 
-				  changed
-				- aboutpage.js requires a div#vis DOM element in the html page
-				  to populate with the transaction map. sizing can be set in
-				  aboutpage.js
-				- Currently this view passes a .json datafile parameter to the 
-				  front end, which then loops on the transactions in that file
-				- map.css is included for the map styles, about-lobby.css is 
-				  included for the text styling
+<a href="#"><img src="https://github.com/williaster/wepay_transactions/blob/master/app/static/imgs/about.png" align="center" height="400" width="auto" ></a>
 
-			http://x.x.x.x:port/domain/lobby --> lobby.html
-				
-				- This view is slightly more complex than the about view, 
-				  it contains a map chart as in about.html, as well as a 
-				  counter which takes a starting ct parameter and increments 
-				  as transactions are animated. 
-				- lobbypage.js requires a div#vis DOM element to populate with
-				  the transactions map, and another element with a desired
-				  id whose html contents will be replaced with transaction 
-				  count values.
-				- map.css is included for the map styles, about-lobby.css is 
-				  included for the text styling
+		http://x.x.x.x:port/domain/lobby --> **lobby.html**
+			
+			- This view is slightly more complex than the about view, 
+			  it contains a map chart as in about.html, as well as a 
+			  counter which takes a starting ct parameter and increments 
+			  as transactions are animated. 
+			- lobbypage.js requires a div#vis DOM element to populate with
+			  the transactions map, and another element with a desired
+			  id whose html contents will be replaced with transaction 
+			  count values.
+			- map.css is included for the map styles, about-lobby.css is 
+			  included for the text styling
 
-			http://x.x.x.x:port/domain/customer --> customer.html 
+<a href="#"><img src="https://github.com/williaster/wepay_transactions/blob/master/app/static/imgs/lobby.png" align="center" height="400" width="auto" ></a>
 
-				- This is the most complex view
+		http://x.x.x.x:port/domain/customer --> **customer.html** 
 
-		
-	- app/static/python/
-		Python module (and script) for parsing .csv files of WePay transaction 
-		data. This can be used to pre-process data, or be intergrated for live 
-		parsing with the app itself. Example views of both types are provided.
+			- This view utilizes all transaction modules and provides the greatest funcitonality
+			- It includes a transaction map, a transaction count timeline, a wepay logo, a transaction
+			  counter, and sliders that control the speed and arc lifetime. Note: these variables may
+			  be set to any desired value in the other views.
 
-	- app/static/data/
-		This is the data path. All global variable paths are set to point here 
-		Varying transaction data lives in data/txns/, while requried/static map 
-		coordinate data for the visualization lives in data/maps
+<a href="#"><img src="https://github.com/williaster/wepay_transactions/blob/master/app/static/imgs/customer.png" align="center" height="400" width="auto" ></a>
+	
+* **app/static/python/**
+	Python module (and script) for parsing .csv files of WePay transaction 
+	data. This can be used to pre-process data, or be intergrated for live 
+	parsing with the app itself. Example views of both types are provided.
 
-	- app/static/js/
+* **app/static/data/**
+	This is the data path. All global variable paths are set to point here 
+	Varying transaction data lives in data/txns/, while requried/static map 
+	coordinate data for the visualization lives in data/maps
 
-	- app/static/css/
+* **app/static/js/**
 
-	- app/static/templates/
-		This is where the .html files for the three rendered views live.
-		
-		All of the DOM content in the customer.html view is generated by d3.js,
-		so layout changes are controlled with customerpage.js
+* **app/static/css/**
 
-		while example DOM content is included in
-===============================================================================
+* **app/static/templates/**
+	This is where the .html files for the three rendered views live.
+	
+	All of the DOM content in the customer.html view is generated by d3.js,
+	so layout changes are controlled with customerpage.js
+
+	while example DOM content is included in
+
 
 Front-end and Back-end design
 
+##Dependencies
 
+###Python:
+*Pandas (transaction data parsing)
+*argparse (to parse data as script)
+*Flask (webapp)
 
-Python dependencies:
-	Pandas (transaction data parsing)
-	argparse 
-	Flask (webapp)
+###Javascript (these may live in the static/lib folder, or their URIs may be referenced):
+*d3.js -- http://d3js.org/d3.v3.min.js 
+ 	core visualization library
+*topojson.js -- http://d3js.org/topojson.v1.min.js
+	essential for map rendering within d3
+*queue.js -- http://d3js.org/queue.v1.min.js
+	minimal asynchronous helper module
 
-Javascript dependencies:
-(these may live in the static/lib folder, or their URIs referenced):
-	d3.js -- http://d3js.org/d3.v3.min.js
-	geojson.js -- 
-	queue.js -- 
-
-Other:
-	Lato font is referenced as a stylesheet
+###Other:
+*Lato font is referenced as a stylesheet
 
 ===============================================================================
 
