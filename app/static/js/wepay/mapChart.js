@@ -6,7 +6,10 @@
  * The map module is the core of the transaction visualization and therefore,
  * in addition to creating the transaction map chart, it acts as a 
  * visualization controller if additional components (e.g., counters) are added.
- * In order to preserve the true timing betwween transactions (from data), 
+ * This is done to keep counter and timeline updating in sync with the arcs
+ * displayed on the map chart.
+ *
+ * In order to preserve the true timing between transactions in the data, 
  * this works through recursive callbacks with the d3.timer(). The
  * current transaction group is pulled based on a d3.wepay._txnIdx variable,
  * initializes its own animiation, and calls a d3.timer() that pauses for an
@@ -36,7 +39,6 @@
  *
  * nb: 	In order to support looping without approaching infinite memory, 
  * 		transactions remove themselves from the DOM after animation.
- * 
  */
 d3.wepay = d3.wepay || {}; // declare namespace if it doesn't exist 
 d3.wepay.map = function mapChart() {

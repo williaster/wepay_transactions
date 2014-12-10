@@ -1,4 +1,16 @@
-function mapWithoutCounter(dataFile, maxpauseMS, startCt) {
+/*
+ * Creates a d3.js map transaction visualziation. 
+ * @param dataFile 			Relative path to a parsed .json file of transactions
+ * 							Loops on the transactions in this file
+ * @param maxPauseMS 		Maximum pause time between transactions, in ms
+ *
+ * Requires:
+ * 		A div#vis element in the html page in which the visualization will be made
+ * Depends on:
+ * 		wepay/mapChart.js, wepay/util.js
+ * 		d3.js, queue.js, topojson.js
+ */
+function mapWithoutCounter(dataFile, maxpauseMS) {
 	d3.select("#loading").remove(); 
 	
 	d3.wepay._maxTransactions = 50000, 	// max transactions summarized in the timeline; 
@@ -18,7 +30,7 @@ function mapWithoutCounter(dataFile, maxpauseMS, startCt) {
 
 	var visWidth    = 964,
 		visHeight   = visWidth / 2.5 // rough map w : h ratio 
-		mapWidth    = visWidth; 	 // map will overflow vis container if not clipped by visHeight
+		mapWidth    = visWidth; 	 // nb: map will overflow vis container if not clipped by visHeight
 	
 	// Create the visualization svg, the map is added to this DOM selection
 	var vis = d3.select("#vis").append("svg")

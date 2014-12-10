@@ -3,26 +3,44 @@
  * @author chris c williams
  * @date   2014-12
  *
- * Adds a slider chart function/module to the d3.wepay namespace. The returned
- * closure is both an object and a function, i.e. in the d3 reusable chart 
- * pattern
+ * Adds a slider chart function/module to the d3.wepay namespace. The return
+ * value follows the d3 reusable chart pattern in the sense that it is 
+ * an object and has methods and properties. It also has getter/setter
+ * methods to set many slider properties (see Public methdods in code)
+ *
+ * sliders have sizes, css class handles, initial values, a domain (range) of 
+ * values they may take, scales, and labels. labels consist of two parts: 
+ * a static text label (the empty string by default), and a numeric value. 
+ * The static value can just be set using the labelText() getter/setter. The
+ * interface to the numeric value (empty by default) is assigning a function 
+ * which is passed the new value of the slider, and the return value of this
+ * callback is set as the numeric component of the label. The speed slider in
+ * customerpage.js demonstrates this, with a callback that appends "x" to the
+ * new numeric value. (e.g., 5 --> 5x).
+ *
+ * The coolest part about sliders is that upon updating to new value, they
+ * execute a callback function which is passed the new slider value. This
+ * function can be set using the updateVal() method. In the WePay visualization
+ * the callbacks update global private variables in the d3.wepay._x namespace
+ * so that the sliders have an effect on some variable in the visualization,
+ * e.g., speed or transaction arc lifetime
  */
 
 d3.wepay = d3.wepay || {}; // declare namespace if it doesn't exist 
 d3.wepay.slider = function() {
 	// Private variables ------------------------------------------------------
-	var margin	 		  = { top: 0, right: 0, bottom: 0, left: 25, labelSpace: 15, speedMargin: 11 },
+	var margin	 		  = { top: 0, right: 0, bottom: 0, left: 25, 
+							  speedMargin: 11 },	// margin between slider and label
 		width 			  = 150,
 		height 		 	  = 75,
 		domain            = [1,100], 			// default range of values for slider to take
-		initVal           = 0,       			// default initial value of slider
+		initVal           = 1,       			// default initial value of slider. don't use 0 if log scale!
 		labelLabelText    = "",
-		sliderClass 	  = "slider-g",
+		sliderClass 	  = "slider-g",			// css class for the slider DOM element for styling.
 		handleRadius      = 6,      		  	// radius of slider handle circle
-		scaleObj          = d3.scale.linear(), 	// linear scale by default
+		scaleObj          = d3.scale.linear(), 	// linear scale by default, log good for large ranges
 		sliderWidth, sliderHeight, slide, sliderHandle, sliderScale, sliderAxis, labelVal, labelLabel, brush;
 
-	var dispatch = d3.dispatch("updateVal", "getLabelVal");
 	function slider(_selection) {
 		_selection.each(function(_data) {
 
@@ -63,19 +81,18 @@ d3.wepay.slider = function() {
 				.attr("transform", "translate(0," + sliderHeight/2 + ")")
 				.attr("r", handleRadius);
 
-			labelVal = container.append("text")
-				.attr("class", "label-val")
+			var label = container.append("g")
 				.attr("transform", "translate(" + 
-					  (+sliderWidth + margin.speedMargin) + "," + sliderHeight/2 + ")");
+					  (+sliderWidth + margin.speedMargin) + "," + sliderHeight/2 + ")")
+				.append("text");
 
-			labelLabel = container.append("text")
+			labelVal = label.append("tspan")
+				.attr("class", "label-val")
+				
+			labelLabel = label.append("tspan")
 				.attr("class", "label-label")
-				.text(labelLabelText)
-				.attr("transform", "translate(" + (+sliderWidth + 
-					  							   +labelVal[0][0].offsetWidth + 
-					  							   +margin.labelSpace) + 
-					            			  "," + sliderHeight / 2 + ")");
-
+				.text(labelLabelText);
+	
 			slide.call(brush.event);
 			updateLabel();
 		});
@@ -84,7 +101,7 @@ d3.wepay.slider = function() {
 	slider._setValCallback      = function() { return ""; }
 
 	// Public getter/setter methods -------------------------------------------
-	// supports method chaining 
+	// all support method chaining by returning references to themselves
 	slider.initVal = function(_v) { // initial position of slider
 		if (!arguments.length) return initVal;
 		initVal = _v;

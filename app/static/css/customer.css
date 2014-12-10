@@ -134,6 +134,6 @@ text.timeline-xlabel, text.timeline-ylabel {
 	stroke-width: 2px;
 	cursor: pointer;
 }
-text.label-val {
+text .label-val {
 	fill: #f2f2f2;
 }

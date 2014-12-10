@@ -1,3 +1,19 @@
+/*
+ * Creates a d3.js map transaction visualziation with a simple counter. 
+ *
+ * @param dataFile 			Relative path to a parsed .json file of transactions
+ * 							Loops on the transactions in this file
+ * @param maxPauseMS 		Maximum pause time between transactions, in ms
+ * @param startCt			Starting count of the counter element
+ * @param counterElementId 	Id of element whose html content will be replaced with
+ *							the running transaction count in sync with map txn visualizations
+ *
+ * Requires:
+ * 		A div#vis element in the html page in which the visualization will be made
+ * Depends on:
+ * 		wepay/mapChart.js, wepay/counter.js, wepay/util.js
+ * 		d3.js, queue.js, topojson.js
+ */
 function mapWithCounter(dataFile, maxpauseMS, startCt, counterElemId) {
 	d3.select("#loading").remove(); 
 	

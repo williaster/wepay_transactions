@@ -2,6 +2,10 @@
  * Logo module. Makes a wepay logo.
  * @date  	2014-12
  * @author 	chris c williams
+ *
+ * wepay.logo() initiailizes a logo object with a specific size and margins.
+ * Following the d3 reusable chart pattern, after initialization the object
+ * should be called on a selection, in which the logo is made.
  */
 
  d3.wepay = d3.wepay || {} // lazy loading of namespace
@@ -54,6 +58,7 @@
  	return logo;
  }
 
+ // Currently not used. A minimal text element
  d3.wepay.label = function(text) {
  	var labelText = text ? text : "";
 

@@ -4,30 +4,44 @@
  * @date   2014-12
  *
  * Utility functions added to the d3.wepay.util namespace. This module includes
- * functions that manage getting / updating data, and controller-like tasks for
- * the visualization. It should be included in all transaction visualizations.
+ * functions that parse data, fetching and/or updating data through xhr requests, 
+ * and controller-like tasks for the visualization. It should be included in all 
+ * transaction visualizations.
  */
 
 d3.wepay = d3.wepay || {}; 	// declare namespace if it doesn't exist 
 d3.wepay.util = {}; 		// util methods here
 
 /*
- * Returns a colorMaker function used for arc colors. The returned function
- * behaves exactly like a d3.scale.color() scale: it takes as input an index
- * and returns a color which corresponds to that index. If the index exceeds
- * the valid range of colors, colors are recycled. 
+ * Returns a colorMaker function used for arc colors. The returned object
+ * behaves exactly like a d3.scale.color() scale: it is a function that takes as 
+ * input an index and returns a color which corresponds to that index. If the 
+ * index exceeds the valid range of colors, indices/colors are recycled
  *
  * Simply redefine the colors array to determine the possible color outputs
  */
 d3.wepay.util.colorMaker = function() {
-	var colors = ["#3182bd","#6baed6","#9ecae1",  	// blues 
-				  "#31a354","#74c476","#a1d99b", 	// greens
-				  "#636363","#969696"] 				// greys;
+	var colors = [ "#2eb135" , "#195825", "#268438", "#75bf81", "#a7d3af", // greens 
+					"#4991dc", "#25496e", "#376da5", "#6cafdd",  // blues
+					"#343b45", "#52565b", "#697277", "#828a8f" ] // greys
+
 	return d3.scale.ordinal().range(colors.sort()); // sort to randomize order
+													// will get least red vals first ...
+}
+
+/*
+ * Formats a number with commas, better performance than n.toLocaleString(), 
+ * although is less intelligent. not tested with decimals.
+ * source: http://stackoverflow.com/a/2901298
+ */
+d3.wepay.util.numWithCommas = function(n) { 
+	return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 /*
  * Requests new data, parses it, and calls update_transaction_data
+ * Upon completion of data parsing, also executese a callback function
+ * if it is provided.
  */
 d3.wepay.util.getData = function(dataFile, callback) {
 	d3.json(dataFile, function(error, newTxns) {
@@ -96,6 +110,9 @@ d3.wepay.util.updateTxnData = function(newTxns) {
 
 	// Case 0: tranactions is empty, so new_txns are the first txns
 	if (!oldTxns) {
+		if (newTxns.length > d3.wepay._maxTransactions) {
+			newTxns = newTxns.slice(-d3.wepay._maxTransactions);
+		}
 		d3.wepay.util.initVisualization(newTxns);
 	}
 	// Case 1: If the start and end of new_txns match the current transactions,
@@ -111,7 +128,7 @@ d3.wepay.util.updateTxnData = function(newTxns) {
 
 		var nOldKeep   = d3.wepay._maxTransactions - newTxns.length,
 			oldTxns    = nOldKeep > 0 ? oldTxns.slice(-nOldKeep) : [],
-			newTxns    = newTxns.slice(-d3.wepay.maxTransactions),
+			newTxns    = newTxns.slice(-d3.wepay._maxTransactions),
 			concatTxns = oldTxns.concat(newTxns),
 			nTotalTxns = concatTxns.length;
 
@@ -135,6 +152,9 @@ d3.wepay.util.updateTxnData = function(newTxns) {
 
 	// Case 3: None of the above, just start with new data
 	} else { 
+		if (newTxns.length > d3.wepay._maxTransactions) {
+			newTxns = newTxns.slice(-d3.wepay._maxTransactions);
+		}
 		d3.wepay.util.initVisualization(newTxns);
 	}
 }
@@ -142,7 +162,7 @@ d3.wepay.util.updateTxnData = function(newTxns) {
 /*
  * Initializes the visualization by updating the _txns array to the passed
  * txns array, resetting the time and txn indices, updating the timeline
- * if one exists in the namespace, and building txn groups which are DOM
+ * if one exists in the namespace, and building txn groups which are hidden DOM
  * elements with associated txn data.
  */
 d3.wepay.util.initVisualization = function(txns) {
@@ -185,15 +205,6 @@ d3.wepay.util.clearVisualization = function() {
 	d3.wepay._timelineCts = [];
 	
 	if (d3.wepay._timeline) d3.wepay._timeline.initTimeline();
-}
-
-/*
- * Adds commas to a number, better performance than n.toLocaleString(), 
- * although is less intelligent.
- * source: http://stackoverflow.com/a/2901298
- */
-d3.wepay.util.numWithCommas = function(n) { 
-	return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 

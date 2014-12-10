@@ -3,7 +3,28 @@
  * @author chris c williams
  * @date   2014-12
  *
- *  
+ * The timeline module exposes a timelineChart which can be used in 
+ * conjunction with a mapChart, which controls its updating in sync with the
+ * map transaction timer. 
+ * 
+ * The timeline follows the d3 reusable chart pattern, but currently only
+ * exposes getters/setters for its width, height, and margins. Currently
+ * x and y labels can only be changed through updating of private variables
+ *
+ * The timeline abstracts computation of transactions into time bins before
+ * the visualization starts. Counts for the current time bin are updated in
+ * sync with the map arc visualizations. The count vs time histogram displays 
+ * transaction count on rollover.
+ * 
+ * Exposed public methods, used by the mapChart to sync the timeline. These
+ * methods compute bin counts, animate count incrementation, update labels, etc.:
+ * 
+ * 		wepay.timeline.updateTimelineCts(duration) 
+ * 		wepay.timeline.resetTimelineCts(fillToIdx)
+ *		wepay.timeline.updateTimeline()
+ * 		wepay.timeline.initTimeline()
+ *		wepay.timeline.getFillToIdx(txns)
+ *  	wepay.timeline.addTimelineCounts()
  */
 d3.wepay = d3.wepay || {}; // declare namespace if it doesn't exist 
 d3.wepay.timeline = function timelineChart() {
@@ -12,7 +33,8 @@ d3.wepay.timeline = function timelineChart() {
 	d3.wepay._timelineCts = [];
 
 	// Private variables ------------------------------------------------------
-	var margin  = { top: 0, right: 0, bottom: 0, left: 0, ctLabelX: 5, ctLabelY: -5},
+	var margin  = { top: 0, right: 0, bottom: 0, left: 0, 
+					ctLabelX: 5, ctLabelY: -5},
 		width   = 1200,
 		height  = 650,
 		nTimelineBins  = 75, // only approx, depends on vals
@@ -123,8 +145,6 @@ d3.wepay.timeline = function timelineChart() {
 	 * If this condition is not met bin.curr_y is set to = 0;
 	 */
 	timeline.resetTimelineCts = function(fillToIdx) {
-		console.log("resetTimelineCts fillToIdx " + fillToIdx);
-
 		for (var i=0; i < d3.wepay._timelineCts.length; i++) {
 			
 			var currTxnBin = d3.wepay._timelineCts[i],
@@ -262,8 +282,8 @@ d3.wepay.timeline = function timelineChart() {
 
 	 	// Determine offset/anchor/plurality based on idx and current count value
 	 	var textAnchor = i < d3.wepay._timelineCts.length / 2 ? "start" : "end",
-			translateX = i < d3.wepay._timelineCts.length / 2 ? 
-						     margin.ctLabelX : 2 * margin.ctLabelX,
+	 		barWidth   = timeScale( d.x1 ) - timeScale( d.x ),
+			translateX = barWidth / 2,
 			text 	   = d3.wepay.util.numWithCommas(d.curr_y) + 
 				   		 ( d.curr_y == 1 ? " transaction" : " transactions" );
 
@@ -280,19 +300,12 @@ d3.wepay.timeline = function timelineChart() {
 	}
 
 	function updateBarCtLabel(currLabel) {
-			var barIdx   = parseInt( currLabel.attr("id").split("-").slice(-1) ),
+			var barIdx   = parseInt( currLabel.attr("id").split("-").slice(-1) ), // want id from bar-ct-label-id
 				barBin   = d3.wepay._timelineCts[barIdx],
 				newText  = barBin.curr_y == 1 ? barBin.curr_y + " trasaction" :
 												barBin.curr_y + " trasactions";
 
 			addBarCtLabel(timelineHist, barBin, barIdx);
-
-			// // is this necessary?
-			// var start = label.attr("transform");
-			// label.select("text")
-			// 	.attr("class", "bar-ct-label")
-			// 	.attr("transform", label.attr("transform")) // 
-			// 	.text(new_text);
 	}
 
 	return timeline; // return timeline closure

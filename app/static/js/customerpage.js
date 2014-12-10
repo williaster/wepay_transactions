@@ -1,3 +1,29 @@
+/*
+ * Creates a d3.js map transaction visualziation with transaction timeline, counter,
+ * speed control slider, arc lifetime control slider, and wepay logo.
+ *
+ * @param dataFile 			Relative path to a parsed .json file of transactions.
+ * @param loop 				boolean, whether to loop on dataFile transactions, or issue
+ * 							a request for a different data file upon animation of dataFile 
+ * 							transactions
+ * @param maxPauseMS 		Maximum pause time between transactions, in ms
+ * @param callbackDomain 	The full domain and view to which requests for new/updated data files
+ * 							should be made if loop = false. Note that this must match the domain
+ * 							which serves the pages for the visualziation because of browser same
+ *							origin policies. Currently a prev_datafile parameter is included with 
+ * 							an xhr GET request to this domain.
+ * 								e.g., "http://127.0.0.1:5000/update_data"
+ * @param startCt			Starting count of the counter element
+ * 
+ * Note that other parameters may be adjusted by updating private variables, documented below.
+ *
+ * Requires:
+ * 		A div#vis element in the html page in which the visualization will be made
+ * Depends on:
+ * 		wepay/mapChart.js, wepay/timlineChart.js, wepay/counter.js, wepay/slider.js, wepay/util.js
+ * 		d3.js, queue.js, topojson.js
+ */
+
 function mapWithTimeline(dataFile, loop, maxpauseMS, callbackDomain, startCt) {
 	d3.select("#loading").remove();
 	
@@ -10,11 +36,13 @@ function mapWithTimeline(dataFile, loop, maxpauseMS, callbackDomain, startCt) {
 										// the speed slider more responsive, especially for
 										// slow speeds (speed change doesn't take effect until 
 									 	// the next-queued txn fires);
-	d3.wepay._startDelayMS    = 2000, 
-	d3.wepay._speedMultiplier = 5,
-	d3.wepay._callbackDomain  = callbackDomain,
+	d3.wepay._startDelayMS    = 2000,   // after data are loaded, the pause time in MS before start
+	d3.wepay._speedMultiplier = 5,		// mulitplier time 1x speed. Updated by speed slider here.
+	d3.wepay._callbackDomain  = callbackDomain, // if requests for more data are made, they are made here.
+												// note that xhr requests must be made to the same domain as 
+												// the one displaying the visualization templates
 	d3.wepay._dataFile    	  = dataFile,  
-	d3.wepay._loop        	  = loop,   
+	d3.wepay._loop        	  = loop,   	   // whether to loop or try to request more data after dataFile exhausted
 	d3.wepay._speedDomain     = [1,1000],      // output range of speed slider
 	d3.wepay._txnLifetimeDomain = [400, 5000]; // " of arc lifetime slider (in ms)
 
@@ -86,7 +114,7 @@ function mapWithTimeline(dataFile, loop, maxpauseMS, callbackDomain, startCt) {
 		.domain(d3.wepay._speedDomain)
 		.initVal(d3.wepay._speedMultiplier)
 		.updateVal(function(newVal) { d3.wepay._speedMultiplier = newVal; })
-		.getLabelVal(function(newVal) { return d3.wepay.util.numWithCommas(Math.floor(newVal)) + "x"; })
+		.getLabelVal(function(newVal) { return d3.wepay.util.numWithCommas(Math.floor(newVal)) + "x  "; })
 		.labelText("real time")
 		.class("speed-slider")
 		.scale(d3.scale.log());

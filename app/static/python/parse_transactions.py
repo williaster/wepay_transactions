@@ -4,10 +4,14 @@ info="""Module for parsing WePay transactions, or can be used as a script to
           
           - mapping payer/payee zip codes to longitude, latitude values 
             (which d3.js requires). 
-          - annonymizing and minimizing data size for browser 
-          - Provides methods for returning parsed data as JSON or writing 
-            to file.  
-          **nb: Requires the pandas non-standard library.
+          - annonymizing and minimizing data size for browser, output includes 
+            only to/from coordinates and time.
+          - parsed data is returned as JSON, typically as a file.
+          - any data which have null entries for EITHER payer or payee zip codes,
+            or payer or payee countries, are filtered. Currently the number of
+            input and output transactions is printed after parsing.
+
+          nb: Parsing requires the Pandas and argparse non-standard libraries.
 
         To use as a script, see python parse_transactions.py --help
         To use as module, use the csv_to_parsedjson(file_csv, outfile) function
@@ -16,9 +20,9 @@ info="""Module for parsing WePay transactions, or can be used as a script to
         # Input
         When used as a script or module, an input .csv file of WePay data is
         expected. The input .csv file MUST contain the variables:
-            capture_timestamp,                    (eg 1412122952, in SECONDS) 
-            payer_zip, payer_state, payer_country,(eg 30076,GA,US)
-            payee_zip, payee_state, payee_country (")
+            capture_timestamp,       (eg 1412122952, in SECONDS since epoc) 
+            payer_zip, payer_country,(eg 30076,US)
+            payee_zip, payee_country (")
 
             notes on input:
               - Country variables are essential to correctly map zip codes to 
@@ -38,12 +42,17 @@ info="""Module for parsing WePay transactions, or can be used as a script to
 
             notes on output:
               - output is annonymized
-              - output json is sorted by time
+              - output json is SORTED by increasing time. This is required for 
+                the d3.js visualization
               - the coordinate arrays are [long, lat] NOT [lat, long].
-              - the coordinate arrays are of type str
+              - the coordinate arrays are of type str, NOT arrays. They can 
+                be evaluated in Python or JavaScript to coerce to arrays.
+
+        Example input .csv files and output .json files can currently be found
+        in app/static/data/txns
      """
 
-__author__ = "christopher c williams"
+__author__ = "christopher c williams for WePay"
 __date__   = "2014-11"
 
 import pandas as pd
@@ -63,8 +72,7 @@ def get_txn_longlat(df_txns, df_zip_to_latlong):
        flipped from the normal [lat,long] format, but more closely mirrors 
        [x,y] coordinates and is what d3.js expects. 
     """
-    # Payer coords first
-    # join to get payer coords
+    # Payer coords first, join to get payer coords
     df = pd.merge(df_txns, df_zip_to_latlong, 
                   left_on=["payer_zip", "payer_country"], 
                   right_on=["zip","country"], how="left")
@@ -72,7 +80,7 @@ def get_txn_longlat(df_txns, df_zip_to_latlong):
     # remove rows for which lat/long values weren't found
     df.dropna(inplace=True, subset=["lat", "long"]) 
     
-    # consolidate to single new column
+    # consolidate to single new column as string
     df.loc[:,"payer_coord"] = \
         "[" + df["long"].map(str) + "," + df["lat"].map(str) + "]"
     

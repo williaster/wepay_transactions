@@ -34,16 +34,15 @@
 
         </div>
         <script src="../static/js/aboutpage.js" type="text/javascript"></script>
-        <script src="../static/js/util.js" type="text/javascript"></script>
-        <script src="../static/js/mapChart.js" type="text/javascript"></script>
+        <script src="../static/js/wepay/util.js" type="text/javascript"></script>
+        <script src="../static/js/wepay/mapChart.js" type="text/javascript"></script>
         <script type="text/javascript">
             window.onload = function() {
                 var dataFile       = "{{ datafile }}",
-                    maxpauseMS     = parseInt( "{{ maxpause_ms }}" ),
-                    counterStart   = parseInt( "{{ counter_start }}" );
+                    maxpauseMS     = parseInt( "{{ maxpause_ms }}" );
 
                 if (dataFile.length) {
-                    mapWithoutCounter(dataFile, maxpauseMS, counterStart);
+                    mapWithoutCounter(dataFile, maxpauseMS);
                 
                 } else { // error finding file
                     d3.select("#loading")

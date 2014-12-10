@@ -3,7 +3,17 @@
  * @author chris c williams
  * @date   2014-12
  *
- * This is a simple
+ * The counter module exposes both wepay.counter() and .minCounter() objects. 
+ * Both follow the d3 reusable chart pattern in which, after being initialized 
+ * they should be called on a selection which actually creates the DOM element.
+ * see the customerpage.js and lobbypage.js scripts for example usage.
+ * 
+ * The .counter([startCt]) object supports setting properties such as width, 
+ * height, margin, label, and count, and takes an optional start count parameter
+ * 
+ * The .minCounter([startCt]) object supports setting its count, but otherwise
+ * only updates the html content of the selection which calls it with the
+ * current transaction count.
  */
 d3.wepay = d3.wepay || {}; // declare namespace if it doesn't exist 
 d3.wepay.counter = function counterLabel(startCt) {
@@ -107,6 +117,8 @@ d3.wepay.minCounter = function minCounter(startCt) {
 	}
 
 	// Updates the selection text to the new count value
+	// assumes other components update the d3.wepay._txnCt variable,
+	// and only updates the text.
 	counter.updateCounter = function(newCt) {
 		d3.select(selection).html( d3.wepay.util.numWithCommas(newCt) );
 	}

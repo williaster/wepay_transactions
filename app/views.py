@@ -1,8 +1,5 @@
-info="""Flask view mapping for the WePay transactions visualization app.
-
-        @param  DATA_DIR
-        @param  REL_DATA_DIR
-        @param  CALLBACK_DOMAIN
+info="""Flask view mapping for the WePay transactions visualization app. See
+        specific view funtionsn for more information.
      """
 
 __author__ = "christopher c williams"
@@ -20,6 +17,112 @@ REL_DATA_DIR    = "../static/data/txns"
 CALLBACK_DOMAIN = "http://127.0.0.1:5000/update_data" # callback view for the d3 
                                                       # visualization to request
                                                       # the next data file
+
+#..............................................................................
+# Views
+@app.route('/customer')
+def customer(methods=["GET"]):
+    """View that serves the WePay customer HTML page. Handles a GET request and
+       expects a request 'id' parameter which serves as an identifier for the
+       data to be loaded and served with the page. Currently, this view:
+        1.  Searches for a .json file with the specified name in the data directory 
+            and passes its relative path as the datafile parameter it if found
+        2.  If 1. fails, it searches for a .csv file with the specified name in 
+            the data directory, parses/converts the transaction data to .csv using
+            the parse_transactions module, and returns the relative path of the
+            resultant .json file after Parsing
+        3.  If 1. and 2. fail, it returns the empty string as the datafile for 
+            the front-end to handle.
+
+       Note that Subsequent requests for data (e.g., in the form of XHR/AJAX requests)
+       are expected to be made to the /update_data view.
+
+       @param id        required, currently name of data file to find/pass to vis 
+                        but could be encoded
+       @param loop      optional, whether to loop (default) or keep requesting data. 
+       @param maxpause  optional, max pause time, in ms, between txns
+    """ 
+    title    = "WePay transaction visualization"
+
+    # If the page will loop on a single data file, or request more after the first
+    # data are extinguished / animated
+    loop         = request.args.get("loop") if request.args.get("loop") else "true"
+    
+    # Max pause time between transactions in ms. Deviates from reality but makes vis
+    # more responsive to slider adjustments, etc.
+    maxpause_ms  = int(request.args.get("maxpause")) if request.args.get("maxpause") else 1500 
+    
+    # File name parameter without file extension
+    data_id      = request.args.get("id")
+    data_relpath = get_datafile(data_id)
+    
+    # Initial count for transaction counter
+    counter_start = int(request.args.get("ct")) if request.args.get("ct") else 0;   
+
+    return render_template("customer.html", title=title, datafile=data_relpath,
+                           loopbool_as_str=loop, maxpause_ms=maxpause_ms, 
+                           callback_domain=CALLBACK_DOMAIN, 
+                           counter_start=counter_start)
+
+@app.route('/about')
+def about(methods=["GET"]):
+    """View for mockup of wepay.com About page. Similar to the lobby page 
+       but does NOT include a counter element or variable.
+
+       @param maxpause  optional, max pause time, in ms, between txns
+    """ 
+    title = "WePay: about"
+    
+    # encode some default file (yesterday, random, etc.)
+    data_relpath = "%s/%s" % (REL_DATA_DIR, "sample-data_1k.json") 
+    # maximum pause time between transactions
+    maxpause_ms  = int(request.args.get("maxpause")) if request.args.get("maxpause") else 1500 
+
+    return render_template("about.html", title=title, datafile=data_relpath, 
+                           maxpause_ms=maxpause_ms)
+
+@app.route('/lobby')
+def lobby(methods=["GET"]):
+    """View for mockup lobby display page. Differs from the about page view except 
+       that it includes a counter variable and DOM element. 
+
+       @param loop      optional, whether to loop (default) or keep requesting data. 
+       @param maxpause  optional, max pause time, in ms, between txns
+    """ 
+    title = "WePay Transactions"
+
+    # encode some default file (yesterday, random, etc.)
+    data_relpath = "%s/%s" % (REL_DATA_DIR, "sample-data_1k.json") 
+    # initial starting transaction count for vis counter
+    counter_start = int(request.args.get("ct")) if request.args.get("ct") else 0;   
+    # maximum pause time between transactions
+    maxpause_ms  = int(request.args.get("maxpause")) if request.args.get("maxpause") else 1500 
+
+    return render_template("lobby.html", title=title, datafile=data_relpath, 
+                           counter_start=counter_start, maxpause_ms=maxpause_ms)
+
+@app.route('/update_data')
+def update_data(methods=["GET"]):
+    """Handles requests for a new data file. Current implementation expects a 
+       prev_datafile parameter which enables this controller to find a more recent 
+       file if it exists in the directory, or to return the same file again for looping 
+       if it cannot. The criteria for which data file is returned should be adjusted to
+       WePay's needs, this is one possible route.
+
+       The customer.html visualization will call this view if the loop parameter is not
+       set to true (true by default). See wepay/util.js which makes this request.
+
+       @param prev_datafile required, the last data file used by vis. Currently 
+                            tries to find file newer than this, else returns same.
+    """
+    old_relpath     = new_relpath = request.args.get("prev_datafile")
+    old_file        = os.path.split( old_relpath )[1] # remove path
+    mostrecent_file = get_mostrecent_file(DATA_DIR,  "*.json") # try to find more recent file
+
+    if old_file != mostrecent_file:
+        new_relpath = "%s/%s" % (REL_DATA_DIR, mostrecent_file)
+
+    return new_relpath
 
 #..............................................................................
 # Helper functions for views
@@ -64,80 +167,3 @@ def get_mostrecent_file(directory, pattern):
         return mostrecent_file
     else: 
         return "" # no match
-
-
-#..............................................................................
-# Views
-@app.route('/')
-@app.route('/customer')
-def customer(methods=["GET"]):
-    """Base view that serves the WePay HTML page. Handles a GET request and
-       expects a reques 'id' parameter which serves as an identifier for the
-       data to be loaded and served with the page. 
-
-       Subsequent requests for data (e.g., in the form of XHR/AJAX requests)
-       are expected to be made to the /get_data view.
-    """ 
-    title    = "WePay transaction visualization"
-
-    loop         = request.args.get("loop") if request.args.get("loop") else "true"
-    maxpause_ms  = int(request.args.get("maxpause")) if request.args.get("maxpause") else 1500 
-    data_id      = request.args.get("id")
-    data_relpath = get_datafile(data_id)
-    counter_start = int(request.args.get("ct")) if request.args.get("ct") else 0;   
-
-    return render_template("customer.html", title=title, datafile=data_relpath,
-                           loopbool_as_str=loop, maxpause_ms=maxpause_ms, 
-                           callback_domain=CALLBACK_DOMAIN, 
-                           counter_start=counter_start)
-
-@app.route('/about')
-def about(methods=["GET"]):
-    """View for mockup of wepay.com About page. Similar to the lobby page 
-       but does NOT include a counter element or variable.
-    """ 
-    title = "WePay: about"
-    
-    # encode some default file (yesterday, random, etc.)
-    data_relpath = "%s/%s" % (REL_DATA_DIR, "sample-data_1k.json") 
-    # maximum pause time between transactions
-    maxpause_ms  = int(request.args.get("maxpause")) if request.args.get("maxpause") else 1500 
-
-    return render_template("about.html", title=title, datafile=data_relpath, 
-                           maxpause_ms=maxpause_ms)
-
-@app.route('/lobby')
-def lobby(methods=["GET"]):
-    """View for mockup lobby display page. Differs from the about page view except 
-       that it includes a counter variable and DOM element.
-    """ 
-    title = "WePay Transactions"
-
-    # encode some default file (yesterday, random, etc.)
-    data_relpath = "%s/%s" % (REL_DATA_DIR, "sample-data_1k.json") 
-    # initial starting transaction count parameter
-    counter_start = int(request.args.get("ct")) if request.args.get("ct") else 0;   
-    # maximum pause time between transactions
-    maxpause_ms  = int(request.args.get("maxpause")) if request.args.get("maxpause") else 1500 
-
-    return render_template("lobby.html", title=title, datafile=data_relpath, 
-                           counter_start=counter_start, maxpause_ms=maxpause_ms)
-
-@app.route('/update_data')
-def update_data(methods=["GET"]):
-    """Handles requests for a new data file. Current implementation expects a 
-       prev_datafile parameter which enables this controller to find a more 
-       recent file if it exists in the directory, or to return the same 
-       file again for looping if it cannot.
-
-       The visualization will call this view if the loop parameter is not
-       set to true (true by default)
-    """
-    old_relpath     = new_relpath = request.args.get("prev_datafile")
-    old_file        = os.path.split( old_relpath )[1] # remove path
-    mostrecent_file = get_mostrecent_file(DATA_DIR,  "*.json")
-
-    if old_file != mostrecent_file: 
-        new_relpath = "%s/%s" % (REL_DATA_DIR, mostrecent_file)
-
-    return new_relpath
