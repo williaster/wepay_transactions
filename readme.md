@@ -14,12 +14,12 @@ See specific files for more detailed documentation, methods, parameters, etc.:
 	Flask web app with three different views/pages for different use-cases 
 	and functionality.<br><br>
 
-	####app/views.py
+	#####app/views.py
 	This file defines and maps the Flask views for the web app to their appropriate template .html file. 
 	Some (mainly /customer) handle data parsing, while others currently have hard-coded data files,
 	which should be updated to WePay needs.
 
-	####Pages/views
+	#####Pages/views
 	* template: **about.html**<br>view: **http://x.x.x.x:port/about**
 		* This is a mockup of use of the visualization on the WePay website /about page
 		* The only transaction component of this view is the map,
