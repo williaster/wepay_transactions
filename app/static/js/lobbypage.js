@@ -50,12 +50,12 @@ function mapWithCounter(dataFile, maxpauseMS, startCt, counterElemId) {
 	d3.wepay._counter = d3.wepay.minCounter()
 		.count(startCt);
 
-	// Create map and counter
-	vis.call(d3.wepay._map) 		// make map
-	d3.select("#" + counterElemId)  // make counter, tied to the selection that calls it
-		.call(d3.wepay._counter); 
+	// Create counter
+	d3.select("#" + counterElemId).call(d3.wepay._counter); // counter tied to selection that calls it
 
-	queue() // nb: .defer() passes a callback to the funtion, too
+	// Create map, then load data and start vis
+	queue(1) // nb: .defer() passes a callback to the funtion, too
+		.defer(d3.wepay._map, vis)
 		.defer(d3.wepay.util.getData, dataFile) 
 	 	.await(d3.wepay._map.start);
 }

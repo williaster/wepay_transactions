@@ -129,15 +129,15 @@ function mapWithTimeline(dataFile, loop, maxpauseMS, callbackDomain, startCt) {
 		.scale(d3.scale.log());
 
 	// Create components, within the DOM selection that calls them
-	vis.call(d3.wepay._map);
 	vis.call(d3.wepay._timeline);   
 	vis.call(d3.wepay._counter); 
 	vis.call(d3.wepay._logo);	
 	sliderContainer.call(d3.wepay._speedSlider);
 	sliderContainer.call(d3.wepay._lifetimeSlider);
 
-	queue() // load data then start, 
-			// nb: .defer() passes a callback to the funtion, too
+	// Load map first, then data and start vis
+	queue(1) // nb: .defer() passes a callback to the funtion, too
+		.defer(d3.wepay._map, vis)
 		.defer(d3.wepay.util.getData, dataFile)
 		.await(d3.wepay._map.start);
 }

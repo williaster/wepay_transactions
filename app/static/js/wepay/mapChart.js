@@ -65,16 +65,11 @@ d3.wepay.map = function mapChart() {
 		mapSvg, projection, sky, landPath, skyPath, arcColor;
 	
 	// Chart closure, this is the return value of the module
-	function map(_selection) {
+	function map(_selection, callback) {
     	_selection.each(function(_data) { // nb: data not used, this draws map
     		
     		var mapWidth   = width  - margin.left - margin.right,
 				mapHeight  = height - margin.top  - margin.bottom;
-			
-			// console.log(width + " x " + height);
-			// console.log(margin);	
-			// console.log(mapWidth + " x " + mapHeight);
-			// console.log(w_to_h_ratio);
 
 			// There are two projection levels / shells for 3D effect: land and sky
 			land = d3.geo.orthographic()
@@ -146,6 +141,8 @@ d3.wepay.map = function mapChart() {
 				.attr("width", "300%").attr("height", "300%")
 				.append("feGaussianBlur")
 				.attr("stdDeviation", 3);
+
+			if (callback) callback();
     	});
     }
 

@@ -43,10 +43,9 @@ function mapWithoutCounter(dataFile, maxpauseMS) {
 		.width(mapWidth) // scales height automatically
 		.txnLifetime(d3.wepay._txnLifetime);
 
-	// Create map
-	vis.call(d3.wepay._map) 	
-	
-	queue() // nb: .defer() passes a callback to the funtion, too
+	// Load map first, then fetch data and start vis
+	queue(1) // nb: .defer() passes a callback to the funtion, too
+		.defer(d3.wepay._map, vis)
 		.defer(d3.wepay.util.getData, dataFile) 
 	 	.await(d3.wepay._map.start);
 }
