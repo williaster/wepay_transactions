@@ -127,6 +127,8 @@ d3.wepay.map = function mapChart() {
 					.datum( topojson.feature(world, world.objects.countries) )
 					.attr("class", "land")
 					.attr("d", landPath);
+
+				if (callback) callback(); // ensures map layer below data layer
 			});
 
 			// Add svg style defs for arc head
@@ -142,7 +144,6 @@ d3.wepay.map = function mapChart() {
 				.append("feGaussianBlur")
 				.attr("stdDeviation", 3);
 
-			if (callback) callback();
     	});
     }
 
