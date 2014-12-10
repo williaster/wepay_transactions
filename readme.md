@@ -32,7 +32,7 @@ See specific files for more detailed documentation, methods, parameters, etc.:
 		  loops on the transactions in that file. 
 		* map.css is included for the map styles, about-lobby.css is included for the text styling, etc.
 		* mapChart.js, util.js are required for the visualization, in addition to the universal 
-		  dependencies (below)
+		  dependencies (below)<br>
 <a href="#"><img src="https://github.com/williaster/wepay_transactions/blob/master/app/static/imgs/about.png" left-margin="15px" height="400" width="auto" ></a>
 
 	* template: **lobby.html**<br>view: **http://x.x.x.x:port/lobby[?ct=101]**
@@ -49,7 +49,7 @@ See specific files for more detailed documentation, methods, parameters, etc.:
 		  loops on the transactions in that file. 
 		* map.css is included for the map styles, about-lobby.css is included for the text styling
 		* mapChart.js, counter.js, and util.js are required for the visualization, in addition to the universal 
-		  dependencies (below)
+		  dependencies (below)<br>
 <a href="#"><img src="https://github.com/williaster/wepay_transactions/blob/master/app/static/imgs/lobby.png" align="middle" height="400" width="auto" left-margin="15px"></a>
 
 	* template: **customer.html**<br>view: **http://x.x.x.x:port/customer?id=filename[&ct=101&loop=true]**
@@ -67,7 +67,7 @@ See specific files for more detailed documentation, methods, parameters, etc.:
 		  the first file transactions are shown/exhausted. See views.py for more info.
 		* customer.css includes all css styles for the page.
 		* mapChart.js, timelineChart.js, util.js, slider.js, and counter.js are required for the visualization, in
-		  addition to the universal dependencies (below)
+		  addition to the universal dependencies (below)<br>
 <a href="#"><img src="https://github.com/williaster/wepay_transactions/blob/master/app/static/imgs/customer.png" align="middle" height="auto" width="550" left-margin="15px"></a>
 	
 * **app/static/python/parse_transactions.py**<br>
@@ -92,7 +92,7 @@ See specific files for more detailed documentation, methods, parameters, etc.:
 	* **customerpage.js**
 
 * **app/static/js/wepay**<br>
-	The d3.wepay modules. These currently include:
+	The d3.wepay namespace modules. These currently include:
 	
 	* **mapChart.js** d3.wepay.map()<br>
 		This is the map on which transactions are displayed. It has configurable parameters which 
