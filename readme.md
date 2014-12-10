@@ -1,67 +1,84 @@
 ##WePay transaction visualization 
-Transaction data parsing and d3.js / Flask web application. Current project encompasses transaction data parsing, several d3 modules for different visualizations of transaction metrics, and three different views/pages designed for different use cases: <br>**lobby version, website version, and customer version**
+Transaction data parsing and d3.js / Flask web application. Current project encompasses transaction data parsing, several d3 modules for different visualizations of WePay transaction metrics, and three different views/pages designed for different use cases: <br>**lobby version**, **website version**, and **customer version**
 
 #####Chris Williams (copyright WePay)
 #####2014-Nov
 
 ##Contents 
-see specific files for more detailed documentation, methods, parameters, etc.:
+See specific files for more detailed documentation, methods, parameters, etc.:
 
 * **run.py**<br>
-	Running run.py from the terminal will start the web app server 
+	Running run.py from the terminal will start the web app server, if all dependencies are installed.
 
 * **app/**<br>
 	Flask web app with three different views/pages for different use-cases 
-	and functionality.
+	and functionality.<br><br>
+
+	####app/views.py
+	This file defines and maps the Flask views for the web app to their appropriate template .html file. 
+	Some (mainly /customer) handle data parsing, while others currently have hard-coded data files,
+	which should be updated to WePay needs.
 
 	####Pages/views
-	* **about.html**<br>http://x.x.x.x:port/about
-		* This is a mockup of use of the visualization on the WePay /about page
+	* template: **about.html**<br>view: **http://x.x.x.x:port/about**
+		* This is a mockup of use of the visualization on the WePay website /about page
 		* The only transaction component of this view is the map,
-		  the header and footer are static content and could easily be 
-		  changed
-		* aboutpage.js requires a div#vis DOM element in the html page
-		  to populate with the transaction map. Sizing of the map, and other variables can be set in
-		  aboutpage.js
+		  the header and footer consist entirely of static html content and could easily be changed
+		* mapWithoutCounter(dataFile, maxpauseMS) in aboutpage.js creates the visualization for this page, 
+		  and requires a div#vis DOM element in the html page to populate with the transaction map. Sizing 
+		  of the map, and other variables such as speed and arc lifetime can be set in aboutpage.js
 		* Currently the Flask view passes a hard-coded json datafile parameter (this 
 		  could change daily, could sample different datasets, etc.) to the front end, which then 
-		  loops on the transactions in that file
-		* map.css is included for the map styles, about-lobby.css is 
-		  included for the text styling, etc.
-		* mapChart.js, util.js are required for the visualization, in addition to the other dependencies
+		  loops on the transactions in that file. 
+		* map.css is included for the map styles, about-lobby.css is included for the text styling, etc.
+		* mapChart.js, util.js are required for the visualization, in addition to the universal 
+		  dependencies (below)
 <a href="#"><img src="https://github.com/williaster/wepay_transactions/blob/master/app/static/imgs/about.png" left-margin="15px" height="400" width="auto" ></a>
 
-	* **lobby.html**<br>http://x.x.x.x:port/lobby[?ct=101]
-		* This view is intended for use in the WePay office lobby.
-		  It is slightly more complex than the about view and in addition 
-		  to containing s a map chart as in about.html it has a counter which 
-		  increments as transactions are animated. 
-		* lobbypage.js requires a div#vis DOM element to populate with
-		  the transactions map, and another element with a desired
-		  id whose html contents will be replaced with transaction 
-		  count values.
-		* map.css is included for the map styles, about-lobby.css is 
-		  included for the text styling
+	* template: **lobby.html**<br>view: **http://x.x.x.x:port/lobby[?ct=101]**
+		* This view is intended for use in the WePay office lobby. It is slightly more complex 
+		  than the about view in that it contains a counter which increments in sync with transactions 
+		  as they are animated. 
+		* mapWithCounter(dataFile, maxpauseMS, startCt, counterElemId) in lobbypage.js creates the 
+		  visualization for this page. It requires a div#vis DOM element to 
+		  populate with the transactions map, and another element whose id is passed as counterElemId
+		  whose html content will be replaced with transaction count values. The sizing of the map, 
+		  and other variables such as speed and arc lifetime can be set in aboutpage.js.
+		* Currently the Flask view passes a hard-coded json datafile parameter (this 
+		  could change daily, could sample different datasets, etc.) to the front end, which then 
+		  loops on the transactions in that file. 
+		* map.css is included for the map styles, about-lobby.css is included for the text styling
+		* mapChart.js, counter.js, and util.js are required for the visualization, in addition to the universal 
+		  dependencies (below)
 <a href="#"><img src="https://github.com/williaster/wepay_transactions/blob/master/app/static/imgs/lobby.png" align="middle" height="400" width="auto" left-margin="15px"></a>
 
-	* **customer.html**<br>http://x.x.x.x:port/customer?id=filename[&ct=101&loop=true]
-		* This view utilizes all transaction modules and provides the greatest funcitonality
-		* It includes a transaction map, a transaction count timeline, a wepay logo, a transaction
-		  counter, and sliders that control the speed and arc lifetime. Note: these same variables are
-		  parameters in the other views / pages, and can be set to any value, the user simply
-		  cannot tune them.
-		* TODO: explain data cycle<br>
+	* template: **customer.html**<br>view: **http://x.x.x.x:port/customer?id=filename[&ct=101&loop=true]**
+		* This view is meant to serve as a more interactive version of the visualization to send to customers,
+		  and it utilizes all WePay visualizaton modules and provides the greatest funcitonality
+		* It includes a transaction map, a transaction count timeline, a WePay logo, a transaction
+		  counter, and sliders that control the speed and arc lifetime.
+		* mapWithTimeline(dataFile, loop, maxpauseMS, callbackDomain, startCt) in customerpage.js creates
+		  the visualization for this page. It requires a div#vis DOM element to populate with visualization 
+		  components. Many visualization parameters may be set in this file, including the range of sliders, 
+		  whether data loops or requests for new data are made, initial slider positions, etc.
+		* Currently the Flask view which serves this page expects an id parameter which is used to identify
+		  the appropriate data file to pass to the visualization. The loop parameter controls whether 
+		  the visualization loops on this file, or if new xhr requests are made to /update_data after
+		  the first file transactions are shown/exhausted. See views.py for more info.
+		* customer.css includes all css styles for the page.
+		* mapChart.js, timelineChart.js, util.js, slider.js, and counter.js are required for the visualization, in
+		  addition to the universal dependencies (below)
 <a href="#"><img src="https://github.com/williaster/wepay_transactions/blob/master/app/static/imgs/customer.png" align="middle" height="auto" width="550" left-margin="15px"></a>
 	
 * **app/static/python/parse_transactions.py**<br>
 	Python module (that can also be used as a script) for parsing .csv files of WePay transaction 
-	data. This can be used to pre-process data, or be intergrated for live 
-	parsing with the app itself. 
+	data. This can be used to pre-process data (e.g. as used with lobby.html), or be intergrated for live 
+	parsing with the app itself (e.g., as used with customer.html). 
 
 * **app/static/data/**<br>
-	This is the data path. All global relative paths are set to point here 
+	This is the data path. All global relative paths are set to point here.
 	Transaction data, which can vary, lives in data/txns/, while requried/static map 
-	coordinate data for the visualization lives in data/maps
+	coordinate data for the mapChart visualization lives in data/maps.
 
 * **app/static/js/**<br>
 	(with the exception of the d3, topojson, and queue .js libraries which 
@@ -138,7 +155,7 @@ see specific files for more detailed documentation, methods, parameters, etc.:
 The browser will stuggle when data size approaches or exceeds single digit MB (i.e., # of transactions exceeds ~40k). Currently there is a d3.wepay._maxTransactions parameter that filters transactions, taking the last _maxTransactions transactions loaded. A future improvement might be sampling data instead of using recency cutoffs, currently this would have to be done back-side.
 
 ##Dependencies
-In addition to this repo's d3.wepay modules, there are a few JavaScript and Python library dependencies for this web app.
+In addition to this repo's d3.wepay modules, there are a few JavaScript and Python library dependencies, as well as some local data that are required for this web app.
 
 ###Python:
 * **Pandas** -- for transaction data parsing
@@ -151,4 +168,6 @@ In addition to this repo's d3.wepay modules, there are a few JavaScript and Pyth
 * **queue.js** -- http://d3js.org/queue.v1.min.js<br>minimal asynchronous helper module
 
 ###Other:
-* **Lato** font is referenced as a stylesheet
+* **Lato** -- font is referenced as a stylesheet
+* **data/maps/countries2.topo.json** is required for display of countries on map, this file is hard-coded in mapChart.js
+* **data/allcountries_zip_to_latlong.txt** -- This lookup table is required for proper transaction parsing, specifically for converting zip codes to long/lat coordinates.
