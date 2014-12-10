@@ -69,10 +69,10 @@ see specific files for more detailed documentation, methods, parameters, etc.:
 	into separate files in js/wepay so that only components that are used on a particular html page/view are added 
 	to the d3.wepay namespace. 
 
-	The controller scripts which use the d3.wepay modules to generate the individual pages / views are:
-		* **aboutpage.js**
-		* **lobbypage.js**
-		* **customerpage.js**
+	The controller scripts which use the d3.wepay modules to generate the individual pages / views are:<br>
+	* **aboutpage.js**
+	* **lobbypage.js**
+	* **customerpage.js**
 
 * **app/static/js/wepay**<br>
 	The d3.wepay modules. These currently include:
