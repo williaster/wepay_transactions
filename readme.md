@@ -135,24 +135,24 @@ See specific files for more detailed documentation, methods, parameters, etc.:
 
 ##Front-end and Back-end design
 ####Back-end
-	Data parsing/munging occurs on the back-end, and requests for the web app come to a __simple__ Flask app. 
-	Some app views, such as the /about and /lobby pages, have hard-coded .json data files. The /customer customer 
-	view takes an id parameter which currently specifies a filename. The front-end requires a .json file,
-	so the back-end first looks for a .json file with the specified name, else if a .csv file with the specified
-	name exists, it parses it when the request is made to make the .json file. If the file cannot be found, no file
-	is returned and the front-endd returns a 404. Note that the only client-side data computations that occur are 
-	timeline bins and counts.
+Data parsing/munging occurs on the back-end, and requests for the web app come to a __simple__ Flask app. 
+Some app views, such as the /about and /lobby pages, have hard-coded .json data files. The /customer customer 
+view takes an id parameter which currently specifies a filename. The front-end requires a .json file,
+so the back-end first looks for a .json file with the specified name, else if a .csv file with the specified
+name exists, it parses it when the request is made to make the .json file. If the file cannot be found, no file
+is returned and the front-endd returns a 404. Note that the only client-side data computations that occur are 
+timeline bins and counts.
 	
 ####Front-end
-	The front-end view that is served expects a .json data file parameter to display in the visualization. 
-	Additional variables, such as loop, initial counter counts, maximum pause time between transactions, etc.
-	can be passed from the back-end and converted to javascript variables in the view's .html template page.
-	Minimal .html DOM structure is required to generate the visualization, as d3.js dynamically adds / removes
-	from the DOM. In most views a div#vis element is required. The xxxpage.js files for each page use the
-	wepay d3 modules to combine varioius visualization elements.
+The front-end view that is served expects a .json data file parameter to display in the visualization. 
+Additional variables, such as loop, initial counter counts, maximum pause time between transactions, etc.
+can be passed from the back-end and converted to javascript variables in the view's .html template page.
+Minimal .html DOM structure is required to generate the visualization, as d3.js dynamically adds / removes
+from the DOM. In most views a div#vis element is required. The xxxpage.js files for each page use the
+wepay d3 modules to combine varioius visualization elements.
 
 ##Data size notes
-The browser will stuggle when data size approaches or exceeds single digit MB (i.e., # of transactions exceeds ~40k). Currently there is a d3.wepay._maxTransactions parameter that filters transactions, taking the last _maxTransactions transactions loaded. A future improvement might be sampling data instead of using recency cutoffs, currently this would have to be done back-side.
+The browser will stuggle when data size approaches or exceeds single digit MB (i.e., # of transactions exceeds ~40k). Although this has not been tested extensively, there is currently a d3.wepay._maxTransactions parameter (set in xxxpage.js files) that filters transactions, taking the last _maxTransactions transactions loaded. A future improvement might be sampling data instead of using recency cutoffs, currently this would have to be done on the back-end.
 
 ##Dependencies
 In addition to this repo's d3.wepay modules, there are a few JavaScript and Python library dependencies, as well as some local data that are required for this web app.
